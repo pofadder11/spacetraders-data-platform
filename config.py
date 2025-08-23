@@ -1,5 +1,6 @@
 # config.py
 import os
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env if present
@@ -10,7 +11,8 @@ API_TOKEN = os.getenv("SPACETRADERS_TOKEN")
 
 if not API_TOKEN:
     raise ValueError(
-        "Missing API token. Please set SPACETRADERS_TOKEN in your environment or .env file."
+        "Missing API token. Please set SPACETRADERS_TOKEN"
+        " in your environment or .env file."
     )
 
 # (Optional) other config
