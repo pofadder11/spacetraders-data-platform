@@ -47,5 +47,5 @@ jobs:
         run: isort . --check-only
 
       # --- Run tests ---
-      - name: Run pytest
-        run: pytest --maxfail=3 --disable-warnings -q
+      - name: Run tests
+        run: PYTHONPATH=spacetraders-data-platform pytest --maxfail=3 --disable-warnings -q
