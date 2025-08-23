@@ -1,6 +1,8 @@
 # tests/test_api.py
-import pytest
+# import pytest
+
 from api.client import SpaceTradersClient
+
 
 def test_get_ships_returns_list():
     client = SpaceTradersClient()

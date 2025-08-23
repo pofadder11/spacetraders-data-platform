@@ -1,5 +1,6 @@
 # api/client.py
 
+
 class SpaceTradersClient:
     """
     Minimal stub of SpaceTraders API client.
