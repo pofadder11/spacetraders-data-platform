@@ -34,7 +34,9 @@ jobs:
       # Run pre-commit hooks (black, isort, flake8)
       - name: Run pre-commit hooks
         run: pre-commit run --all-files
-
+      # Set fake API token for tests
+      - name: Set fake API token for tests
+        run: echo "SPACETRADERS_TOKEN=fake-token" >> $GITHUB_ENV
       # Run tests
       - name: Run tests
         run: |
