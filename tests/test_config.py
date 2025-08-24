@@ -1,6 +1,6 @@
 import os
 
-import config
+import api.config as config
 
 
 def test_api_token_loaded():

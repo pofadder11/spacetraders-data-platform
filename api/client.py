@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-import config
+import api.config as config
 
 
 class SpaceTradersClient:
