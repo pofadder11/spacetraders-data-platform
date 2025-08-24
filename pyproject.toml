@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spacetraders-data-platform"
+version = "0.1.0"
+description = "A client and tools for interacting with the SpaceTraders API"
+authors = [
+    { name = "Your Name", email = "you@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+# --- Runtime dependencies (your code needs these to run) ---
+dependencies = [
+    "requests",
+    "requests-cache",
+    "python-dotenv",
+]
+
+# --- Optional dependencies (extra groups) ---
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "flake8",
+    "isort",
+    "black",
+    "mypy",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api*"]
+
+[tool.black]
+line-length = 79
