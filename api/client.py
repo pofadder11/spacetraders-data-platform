@@ -117,3 +117,13 @@ class SpaceTradersClient:
         }
         return
         self._request("POST", f"my/ships/{ship_id}/transfer", json=payload)
+
+
+# Initialize the client
+client = SpaceTradersClient()
+
+# Call an API method
+ships = client.list_ships()
+
+# Inspect results
+print(ships)
