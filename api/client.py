@@ -28,6 +28,18 @@ class SpaceTradersClient:
         self._cache_enabled = db_path is not None
         self._init_db() if self._cache_enabled else setattr(self, "_cache", {})
 
+        # Fetch headquarters systemSymbol at initialization
+        self.system_symbol: Optional[str] = None
+        self._init_system_symbol()
+
+    def _init_system_symbol(self):
+        """Initialize systemSymbol from
+        agent headquarters (first two parts)."""
+        agent = self.get_my_agent()
+        hq = agent["data"]["headquarters"]
+        self.headquarters = hq  # keep full string as well
+        self.system_symbol = "-".join(hq.split("-")[:2])
+
     # -----------------------------
     # Cache setup
     # -----------------------------
@@ -98,13 +110,26 @@ class SpaceTradersClient:
         return data
 
     # -----------------------------
-    # Example API endpoints
+    # API endpoints
     # -----------------------------
     def get_my_user(self) -> Dict[str, Any]:
         return self._request("GET", "my/account")
 
+    def get_my_agent(self) -> Dict[str, Any]:
+        return self._request("GET", "my/agent")
+
     def list_ships(self) -> Dict[str, Any]:
         return self._request("GET", "my/ships")
+
+    def list_waypoints(
+        self, system_symbol: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """List waypoints for a system.
+        Defaults to the agent’s headquarters system."""
+        system_symbol = system_symbol or self.system_symbol
+        if not system_symbol:
+            raise ValueError("System symbol not set. Call get_my_agent first.")
+        return self._request("GET", f"systems/{system_symbol}/waypoints")
 
     # Example for future expansion
     def transfer_cargo(
@@ -120,10 +145,12 @@ class SpaceTradersClient:
 
 
 # Initialize the client
+
 client = SpaceTradersClient()
 
-# Call an API method
-ships = client.list_ships()
+print("Headquarters:", client.headquarters)  # e.g., X1-ABC-12345
+print("System Symbol:", client.system_symbol)  # e.g., X1-ABC
 
-# Inspect results
-print(ships)
+# List waypoints (defaults to headquarters systemSymbol)
+waypoints = client.list_waypoints()
+print(waypoints)
