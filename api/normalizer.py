@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from typing import Any, Dict, List
 
@@ -114,3 +115,70 @@ def normalize_shipyards(raw_json: dict) -> List[Dict[str, Any]]:
                 }
             )
     return rows
+
+
+def normalize_fleet(conn, ships):
+    cur = conn.cursor()
+
+    for ship in ships:
+        # fleet (operational state)
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO fleet (
+                ship_symbol, name, faction_symbol, role,
+                system_symbol, waypoint_symbol, nav_status, flight_mode,
+                fuel_capacity, fuel_current,
+                cargo_capacity, cargo_units,
+                cooldown_remaining, work_roles
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                ship["symbol"],
+                ship["registration"]["name"],
+                ship["registration"]["factionSymbol"],
+                ship["registration"]["role"],
+                ship["nav"]["systemSymbol"],
+                ship["nav"]["waypointSymbol"],
+                ship["nav"]["status"],
+                ship["nav"]["flightMode"],
+                ship["frame"].get("fuelCapacity", 0),
+                ship["fuel"]["current"],
+                ship["cargo"]["capacity"],
+                ship["cargo"]["units"],
+                ship["cooldown"]["remainingSeconds"],
+                ",".join(m["symbol"] for m in ship.get("mounts", [])),
+            ),
+        )
+
+        # fleet_specs (technical info)
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO fleet_specs (
+                ship_symbol, frame_symbol, frame_name, frame_quality,
+                module_slots, mounting_points,
+                reactor_symbol, reactor_output,
+                engine_symbol, engine_speed,
+                crew_capacity, crew_required, crew_current,
+                modules_json, mounts_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                ship["symbol"],
+                ship["frame"]["symbol"],
+                ship["frame"]["name"],
+                ship["frame"].get("quality", None),
+                ship["frame"]["moduleSlots"],
+                ship["frame"]["mountingPoints"],
+                ship["reactor"]["symbol"],
+                ship["reactor"]["powerOutput"],
+                ship["engine"]["symbol"],
+                ship["engine"]["speed"],
+                ship["crew"]["capacity"],
+                ship["crew"]["required"],
+                ship["crew"]["current"],
+                json.dumps(ship.get("modules", [])),
+                json.dumps(ship.get("mounts", [])),
+            ),
+        )
+
+    conn.commit()
