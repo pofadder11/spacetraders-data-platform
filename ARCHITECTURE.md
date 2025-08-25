@@ -6,6 +6,14 @@
 
 ## **COMPONENTS**
 
+### Orchestration Layer (Runner)
+
+- Entrypoint scripts (`runner.py`, etc.) that coordinate actions.
+- Executes high-level strategies (e.g., start new game, fulfill contracts).
+- Uses API wrappers to trigger actions (navigation, purchasing).
+- Syncs results into the database layer.
+- May use queues / schedulers for long-running or repeated tasks.
+
 ###  1. **Client** (api/client.py)
 
   Defines SpaceTradersClient.
