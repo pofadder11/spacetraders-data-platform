@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+spacetraders_data_platform.egg-info
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -135,6 +136,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.vscode
 .env
 .envrc
 .venv
