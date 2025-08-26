@@ -9,13 +9,13 @@ It demonstrates **API integration, ETL pipelines, SQL databases, analytics, visu
 ---
 
 ## Features
-- **API Client**: Robust Python client with rate-limit handling and caching
-- **ETL Pipelines**: Extract/Transform/Load workflows (Prefect/Airflow-ready)
-- **Database Layer**: PostgreSQL/SQLite with SQLAlchemy ORM
-- **Analytics**: Trade route profitability, fleet allocation, contracts
-- **Dashboards**: Streamlit app with real-time fleet and market insights
-- **Testing & CI/CD**: Pytest, linting, and GitHub Actions for automation
-- **Dockerized**: Fully reproducible environment
+- :white_check_mark: **API Client**: Robust Python client with rate-limit handling and caching
+- :white_check_mark: **ETL Pipelines**: Extract/Transform/Load workflows (Prefect/Airflow-ready)
+- :white_check_mark: **Database Layer**: PostgreSQL/SQLite with SQLAlchemy ORM
+- ⬜ **Analytics**: Trade route profitability, fleet allocation, contracts
+- ⬜ **Dashboards**: Streamlit app with real-time fleet and market insights
+- :white_check_mark: **Testing & CI/CD**: Pytest, linting, and GitHub Actions for automation
+- ⬜ **Dockerized**: Fully reproducible environment
 
 ---
 

@@ -20,7 +20,7 @@
 
   Handles:
 
-  * Authentication (API token from config.py).
+  * Authentication (API token from .env).
 
   * Request/response logic (_request method).
 
