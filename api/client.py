@@ -66,6 +66,24 @@ class SpaceTradersClient:
     ) -> Dict[str, Any]:
         cache_key = f"{method}:{endpoint}:{json.dumps(kwargs, sort_keys=True)}"
 
+        # Debug: show request info
+        print("[DEBUG] Making request:")
+        print(f"  Method: {method}")
+        print(f"  URL: {self.base_url}/{endpoint.lstrip('/')}")
+        print(f"  kwargs: {json.dumps(kwargs, indent=2, default=str)}")
+
+        # Auto-fix: ensure empty JSON body when required
+        headers = kwargs.get("headers", self.session.headers)
+        if method.upper() in {"POST", "PUT", "PATCH"}:
+            has_json_header = headers and "application/json" in headers.get(
+                "Content-Type", ""
+            )
+            if has_json_header and "json" not in kwargs and "data" not in kwargs:
+                print(
+                    f"[DEBUG] Injecting empty JSON body {{}} for {method.upper()} request"
+                )
+                kwargs["json"] = {}
+
         # Check cache first
         if use_cache:
             if self._cache_enabled:
@@ -78,18 +96,33 @@ class SpaceTradersClient:
                 row = c.fetchone()
                 conn.close()
                 if row:
+                    print("[DEBUG] Returning cached response")
                     return json.loads(row[0])
             else:
                 if cache_key in self._cache:
+                    print("[DEBUG] Returning in-memory cached response")
                     return self._cache[cache_key]
 
         # Make actual API request
         try:
             url = f"{self.base_url}/{endpoint.lstrip('/')}"
             response = self.session.request(method, url, timeout=10, **kwargs)
+
+            # Debug: show response before raising
+            print(f"[DEBUG] Response status: {response.status_code}")
+            print(f"[DEBUG] Raw response text: {response.text}")
+
             response.raise_for_status()
-            data = response.json()
+
+            try:
+                data = response.json()
+                print(f"[DEBUG] Parsed JSON response: {json.dumps(data, indent=2)}")
+            except ValueError:
+                print("[DEBUG] Failed to parse JSON; returning raw text instead")
+                data = {"raw_response": response.text}
+
         except requests.RequestException as e:
+            print(f"[DEBUG] RequestException: {e}")
             raise RuntimeError(f"API request failed: {e}") from e
 
         # Save to cache
@@ -150,7 +183,7 @@ class SpaceTradersClient:
 
     def accept_contract(self, contract_id: str) -> Dict[str, Any]:
         """Accept a contract by its ID."""
-        endpoint = f'my/contracts/"{contract_id}"/accept'
+        endpoint = f"my/contracts/{contract_id}/accept"
         return self._request("POST", endpoint)
 
     # -----------------------------
@@ -199,4 +232,17 @@ class SpaceTradersClient:
     def refuel_ship(self, ship_symbol: str) -> Dict[str, Any]:
         """Refuel a ship at its current waypoint."""
         endpoint = f"my/ships/{ship_symbol}/refuel"
+        return self._request("POST", endpoint)
+
+    def negotiate_contract(self, ship_symbol: str) -> Dict[str, Any]:
+        """
+        Negotiate a new contract using a ship.
+
+        Args:
+            ship_symbol (str): The symbol of the ship to use for negotiation (e.g., "JAMPAK-1").
+
+        Returns:
+            Dict[str, Any]: API response containing the negotiated contract.
+        """
+        endpoint = f"my/ships/{ship_symbol}/negotiate/contract"
         return self._request("POST", endpoint)

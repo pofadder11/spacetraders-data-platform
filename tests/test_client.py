@@ -4,10 +4,15 @@ from api.client import SpaceTradersClient
 
 client = SpaceTradersClient()
 
-contracts = client.list_contracts()
-print("Contracts:", contracts)
+# negotiate = client.negotiate_contract("JANKNESS-1")
+# print("Negotiable contracts:", negotiate)
 
-client.accept_contract("cmeq5p79qd1w6uo6y4dzmr32w")
+contracts = client.list_contracts()
+# contract_id = contracts['data'][0]['id']
+# print("First contract ID:", contract_id)
+# print("Contracts:", contracts)
+
+client.accept_contract("cmesgtjlkgjzjuo6yu3cjefqh")
 
 # shipyards = client.list_shipyards()
 # print("Shipyards:", shipyards)
