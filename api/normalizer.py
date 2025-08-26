@@ -1,4 +1,3 @@
-import json
 import sqlite3
 from typing import Any, Dict, List
 
@@ -7,65 +6,15 @@ def init_db(db_path: str = "spacetraders.db") -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
-    # -----------------------------
-    # Existing tables
-    # -----------------------------
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS waypoints (
-            symbol TEXT PRIMARY KEY,
-            system_symbol TEXT NOT NULL,
-            type TEXT NOT NULL
-        );
-        """
-    )
-
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS traits (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            waypoint_symbol TEXT NOT NULL,
-            trait_symbol TEXT NOT NULL,
-            FOREIGN KEY (waypoint_symbol) REFERENCES waypoints(symbol)
-        );
-        """
-    )
-
-    # -----------------------------
-    # New tables for shipyards
-    # -----------------------------
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS shipyards (
-            shipyard_symbol TEXT PRIMARY KEY,
-            waypoint_symbol TEXT NOT NULL,
-            system_symbol TEXT NOT NULL,
-            is_under_construction INTEGER DEFAULT 0,
-            faction_symbol TEXT
-        );
-        """
-    )
-
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS shipyard_ships (
-            shipyard_symbol TEXT,
-            ship_type TEXT,
-            cost INTEGER,
-            other_details TEXT,
-            PRIMARY KEY (shipyard_symbol, ship_type),
-            FOREIGN KEY (shipyard_symbol) REFERENCES shipyards(shipyard_symbol)
-        );
-        """
-    )
+    # Load schema from external .sql file
+    with open("api/db/schema.sql", "r") as f:
+        cur.executescript(f.read())
 
     conn.commit()
     return conn
 
 
-def normalize_waypoints(
-    conn: sqlite3.Connection, data: List[Dict[str, Any]]
-) -> None:
+def normalize_waypoints(conn: sqlite3.Connection, data: List[Dict[str, Any]]) -> None:
     cur = conn.cursor()
 
     for waypoint in data:
@@ -108,77 +57,103 @@ def normalize_shipyards(raw_json: dict) -> List[Dict[str, Any]]:
                     "shipyard_symbol": wp["symbol"],
                     "waypoint_symbol": wp["symbol"],
                     "system_symbol": wp["systemSymbol"],
-                    "is_under_construction": int(
-                        wp.get("isUnderConstruction", False)
-                    ),
+                    "is_under_construction": int(wp.get("isUnderConstruction", False)),
                     "faction_symbol": wp.get("faction", {}).get("symbol"),
                 }
             )
     return rows
 
 
-def normalize_fleet(conn, ships):
+def normalize_fleet(conn: sqlite3.Connection, data: List[Dict[str, Any]]) -> None:
     cur = conn.cursor()
 
-    for ship in ships:
-        # fleet (operational state)
+    for ship in data:
+        symbol = ship["symbol"]
+        ship.get("registration", {})
+        nav = ship.get("nav", {})
+        route = nav.get("route", {})
+        route.get("origin", {})
+        route.get("destination", {})
+        crew = ship.get("crew", {})
+        ship.get("frame", {})
+        ship.get("reactor", {})
+        ship.get("engine", {})
+        fuel = ship.get("fuel", {})
+        cooldown = ship.get("cooldown", {})
+        cargo = ship.get("cargo", {})
+
+        # Insert or replace fleet_nav record
         cur.execute(
             """
-            INSERT OR REPLACE INTO fleet (
+            INSERT OR REPLACE INTO fleet_nav (
                 ship_symbol, name, faction_symbol, role,
-                system_symbol, waypoint_symbol, nav_status, flight_mode,
-                fuel_capacity, fuel_current,
+                system_symbol, waypoint_symbol,
+                route_origin_symbol, route_origin_type,
+                route_destination_symbol, route_destination_type,
+                status, flight_mode,
+                fuel_current, fuel_capacity,
                 cargo_capacity, cargo_units,
-                cooldown_remaining, work_roles
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
+                cooldown_remaining_seconds
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
-                ship["symbol"],
-                ship["registration"]["name"],
-                ship["registration"]["factionSymbol"],
-                ship["registration"]["role"],
-                ship["nav"]["systemSymbol"],
-                ship["nav"]["waypointSymbol"],
-                ship["nav"]["status"],
-                ship["nav"]["flightMode"],
-                ship["frame"].get("fuelCapacity", 0),
-                ship["fuel"]["current"],
-                ship["cargo"]["capacity"],
-                ship["cargo"]["units"],
-                ship["cooldown"]["remainingSeconds"],
-                ",".join(m["symbol"] for m in ship.get("mounts", [])),
+                symbol,
+                ship.get("registration", {}).get("name"),
+                ship.get("registration", {}).get("factionSymbol"),
+                ship.get("registration", {}).get("role"),
+                nav.get("systemSymbol"),
+                nav.get("waypointSymbol"),
+                nav.get("route", {}).get("origin", {}).get("symbol"),
+                nav.get("route", {}).get("origin", {}).get("type"),
+                nav.get("route", {}).get("destination", {}).get("symbol"),
+                nav.get("route", {}).get("destination", {}).get("type"),
+                nav.get("status"),
+                nav.get("flightMode"),
+                fuel.get("current"),
+                fuel.get("capacity"),
+                cargo.get("capacity"),
+                cargo.get("units"),
+                cooldown.get("remainingSeconds"),
             ),
         )
 
-        # fleet_specs (technical info)
+        # Insert or replace fleet_specs record
         cur.execute(
             """
             INSERT OR REPLACE INTO fleet_specs (
-                ship_symbol, frame_symbol, frame_name, frame_quality,
-                module_slots, mounting_points,
-                reactor_symbol, reactor_output,
-                engine_symbol, engine_speed,
-                crew_capacity, crew_required, crew_current,
-                modules_json, mounts_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
+                ship_symbol,
+                frame_symbol, frame_name, frame_condition, frame_integrity,
+                frame_module_slots, frame_mounting_points,
+                reactor_symbol, reactor_name, reactor_power_output,
+                engine_symbol, engine_name, engine_speed,
+                crew_current, crew_required, crew_capacity, crew_rotation, crew_morale,
+                quality
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
-                ship["symbol"],
-                ship["frame"]["symbol"],
-                ship["frame"]["name"],
-                ship["frame"].get("quality", None),
-                ship["frame"]["moduleSlots"],
-                ship["frame"]["mountingPoints"],
-                ship["reactor"]["symbol"],
-                ship["reactor"]["powerOutput"],
-                ship["engine"]["symbol"],
-                ship["engine"]["speed"],
-                ship["crew"]["capacity"],
-                ship["crew"]["required"],
-                ship["crew"]["current"],
-                json.dumps(ship.get("modules", [])),
-                json.dumps(ship.get("mounts", [])),
+                symbol,
+                ship.get("frame", {}).get("symbol"),
+                ship.get("frame", {}).get("name"),
+                ship.get("frame", {}).get("condition"),
+                ship.get("frame", {}).get("integrity"),
+                ship.get("frame", {}).get("moduleSlots"),
+                ship.get("frame", {}).get("mountingPoints"),
+                ship.get("reactor", {}).get("symbol"),
+                ship.get("reactor", {}).get("name"),
+                ship.get("reactor", {}).get("powerOutput"),
+                ship.get("engine", {}).get("symbol"),
+                ship.get("engine", {}).get("name"),
+                ship.get("engine", {}).get("speed"),
+                crew.get("current"),
+                crew.get("required"),
+                crew.get("capacity"),
+                crew.get("rotation"),
+                crew.get("morale"),
+                ship.get("registration", {}).get("quality"),
             ),
         )
 
     conn.commit()
+    print("\n✅ Fleet normalization complete.\n")

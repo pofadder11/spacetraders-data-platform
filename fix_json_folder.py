@@ -27,9 +27,7 @@ def try_parse(raw: str):
     try:
         return ast.literal_eval(raw), "ast"
     except Exception as e:
-        raise ValueError(
-            f"Could not parse as JSON/JSON5/Python-literal: {e}"
-        ) from e
+        raise ValueError(f"Could not parse as JSON/JSON5/Python-literal: {e}") from e
 
 
 def fix_file(p: Path, inplace: bool, backup: bool, force: bool) -> str:
@@ -97,9 +95,7 @@ def run(
         elif msg.startswith("❌"):
             failed += 1
 
-    print(
-        f"\nSummary: scanned={total}, fixed/written={fixed}, failed={failed}"
-    )
+    print(f"\nSummary: scanned={total}, fixed/written={fixed}, failed={failed}")
 
 
 if __name__ == "__main__":
@@ -107,9 +103,7 @@ if __name__ == "__main__":
         description="Validate and repair JSON files in a folder."
     )
     ap.add_argument("folder", nargs="?", default="json_output_samples")
-    ap.add_argument(
-        "--recursive", action="store_true", help="Recurse into subfolders."
-    )
+    ap.add_argument("--recursive", action="store_true", help="Recurse into subfolders.")
     ap.add_argument(
         "--inplace",
         action="store_true",

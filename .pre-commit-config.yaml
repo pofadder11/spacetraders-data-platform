@@ -13,9 +13,9 @@ repos:
         name: isort (python import sorting)
         language_version: python3
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.10
     hooks:
-      - id: flake8
-        additional_dependencies: []
+      - id: ruff
+        args: [--fix, --unsafe-fixes]   # <-- auto-remove unused vars/imports too
         language_version: python3

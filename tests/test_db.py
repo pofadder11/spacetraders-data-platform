@@ -1,8 +1,8 @@
 # test .json normalization and .db populating
 
 from api.client import SpaceTradersClient
-from api.normalizer import init_db  # include normalize_shipyards
-from api.normalizer import normalize_shipyards, normalize_waypoints
+from api.db.init_db import init_db  # include normalize_shipyards
+from api.normalizer import normalize_fleet, normalize_shipyards, normalize_waypoints
 
 # -----------------------------
 # Setup
@@ -30,29 +30,13 @@ shipyards_json = client.list_shipyards(system_symbol)
 # Normalize shipyards
 # -----------------------------
 shipyards_rows = normalize_shipyards(shipyards_json)
-cur = conn.cursor()
-for sy in shipyards_rows:
-    cur.execute(
-        """
-        INSERT OR REPLACE INTO shipyards
-        (shipyard_symbol, waypoint_symbol, system_symbol,
-        is_under_construction, faction_symbol)
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            sy["shipyard_symbol"],
-            sy["waypoint_symbol"],
-            sy["system_symbol"],
-            sy["is_under_construction"],
-            sy["faction_symbol"],
-        ),
-    )
-conn.commit()
-for sy in shipyards_rows:
-    cur.execute(
-        """
-        INSERT OR REPLACE INTO traits (waypoint_symbol, trait_symbol)
-        VALUES (?, ?)
-        """,
-        (sy["waypoint_symbol"], "SHIPYARD"),
-    )
+
+# -----------------------------
+# Fetch fleet
+# -----------------------------
+fleet_json = client.list_ships()
+
+# -----------------------------
+# Normalize fleet into DB
+# -----------------------------
+normalize_fleet(conn, fleet_json["data"])

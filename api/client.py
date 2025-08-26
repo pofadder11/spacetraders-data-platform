@@ -121,9 +121,7 @@ class SpaceTradersClient:
     def list_ships(self) -> Dict[str, Any]:
         return self._request("GET", "my/ships")
 
-    def list_waypoints(
-        self, system_symbol: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def list_waypoints(self, system_symbol: Optional[str] = None) -> Dict[str, Any]:
         """List waypoints for a system.
         Defaults to the agent’s headquarters system."""
         system_symbol = system_symbol or self.system_symbol
@@ -158,9 +156,7 @@ class SpaceTradersClient:
     # -----------------------------
     # Shipyard / Ships Endpoints
     # -----------------------------
-    def list_shipyards(
-        self, system_symbol: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def list_shipyards(self, system_symbol: Optional[str] = None) -> Dict[str, Any]:
         """List shipyards for a system.
         Defaults to the agent’s headquarters system."""
         system_symbol = system_symbol or self.system_symbol
@@ -175,14 +171,10 @@ class SpaceTradersClient:
     ) -> Dict[str, Any]:
         """List ships and services available
         at a specific shipyard waypoint."""
-        endpoint = (
-            f"systems/{system_symbol}/waypoints/{waypoint_symbol}/shipyard"
-        )
+        endpoint = f"systems/{system_symbol}/waypoints/{waypoint_symbol}/shipyard"
         return self._request("GET", endpoint)
 
-    def purchase_ship(
-        self, ship_type: str, waypoint_symbol: str
-    ) -> Dict[str, Any]:
+    def purchase_ship(self, ship_type: str, waypoint_symbol: str) -> Dict[str, Any]:
         """Purchase a new ship at a given shipyard waypoint."""
         endpoint = "my/ships"
         payload = {"shipType": ship_type, "waypointSymbol": waypoint_symbol}
