@@ -121,9 +121,7 @@ class SpaceTradersClient:
     def list_ships(self) -> Dict[str, Any]:
         return self._request("GET", "my/ships")
 
-    def list_waypoints(
-        self, system_symbol: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def list_waypoints(self, system_symbol: Optional[str] = None) -> Dict[str, Any]:
         """List waypoints for a system.
         Defaults to the agent’s headquarters system."""
         system_symbol = system_symbol or self.system_symbol
@@ -143,14 +141,62 @@ class SpaceTradersClient:
         return
         self._request("POST", f"my/ships/{ship_id}/transfer", json=payload)
 
+    # -----------------------------
+    # Contract Endpoints
+    # -----------------------------
+    def list_contracts(self) -> Dict[str, Any]:
+        """List all available contracts for the user."""
+        return self._request("GET", "my/contracts")
 
-# Initialize the client
+    def accept_contract(self, contract_id: str) -> Dict[str, Any]:
+        """Accept a contract by its ID."""
+        endpoint = f'my/contracts/"{contract_id}"/accept'
+        return self._request("POST", endpoint)
 
-client = SpaceTradersClient()
+    # -----------------------------
+    # Shipyard / Ships Endpoints
+    # -----------------------------
+    def list_shipyards(self, system_symbol: Optional[str] = None) -> Dict[str, Any]:
+        """List shipyards for a system.
+        Defaults to the agent’s headquarters system."""
+        system_symbol = system_symbol or self.system_symbol
+        if not system_symbol:
+            raise ValueError("System symbol not set. Call get_my_agent first.")
+        return self._request(
+            "GET", f"systems/{system_symbol}/waypoints?traits=SHIPYARD"
+        )
 
-print("Headquarters:", client.headquarters)  # e.g., X1-ABC-12345
-print("System Symbol:", client.system_symbol)  # e.g., X1-ABC
+    def list_shipyard_ships(
+        self, system_symbol: str, waypoint_symbol: str
+    ) -> Dict[str, Any]:
+        """List ships and services available
+        at a specific shipyard waypoint."""
+        endpoint = f"systems/{system_symbol}/waypoints/{waypoint_symbol}/shipyard"
+        return self._request("GET", endpoint)
 
-# List waypoints (defaults to headquarters systemSymbol)
-waypoints = client.list_waypoints()
-print(waypoints)
+    def purchase_ship(self, ship_type: str, waypoint_symbol: str) -> Dict[str, Any]:
+        """Purchase a new ship at a given shipyard waypoint."""
+        endpoint = "my/ships"
+        payload = {"shipType": ship_type, "waypointSymbol": waypoint_symbol}
+        return self._request("POST", endpoint, json=payload)
+
+    def navigate_ship(self, ship_symbol: str, waypoint_symbol: str) -> Dict[str, Any]:
+        """Navigate a ship to a target waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/navigate"
+        payload = {"waypointSymbol": waypoint_symbol}
+        return self._request("POST", endpoint, json=payload)
+
+    def dock_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Dock a ship at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/dock"
+        return self._request("POST", endpoint)
+
+    def orbit_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Place a ship into orbit at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/orbit"
+        return self._request("POST", endpoint)
+
+    def refuel_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Refuel a ship at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/refuel"
+        return self._request("POST", endpoint)

@@ -1,0 +1,152 @@
+{
+  "data": [
+    {
+      "symbol": "X1-GN67-A2",
+      "type": "MOON",
+      "systemSymbol": "X1-GN67",
+      "x": -23,
+      "y": -4,
+      "orbitals": [],
+      "traits": [
+        {
+          "symbol": "FROZEN",
+          "name": "Frozen",
+          "description": "An ice-covered world with frigid temperatures, providing unique research opportunities and resources such as ice water, ammonia ice, and other frozen compounds."
+        },
+        {
+          "symbol": "SCATTERED_SETTLEMENTS",
+          "name": "Scattered Settlements",
+          "description": "A collection of dispersed communities, each independent yet connected through trade and communication networks."
+        },
+        {
+          "symbol": "TERRAFORMED",
+          "name": "Terraformed",
+          "description": "A waypoint that has been artificially transformed to support life, showcasing the engineering prowess of its inhabitants and providing a hospitable environment for colonization."
+        },
+        {
+          "symbol": "MARKETPLACE",
+          "name": "Marketplace",
+          "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+        },
+        {
+          "symbol": "SHIPYARD",
+          "name": "Shipyard",
+          "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+        }
+      ],
+      "isUnderConstruction": false,
+      "orbits": "X1-GN67-A1",
+      "faction": {
+        "symbol": "AEGIS"
+      },
+      "modifiers": [],
+      "chart": {
+        "waypointSymbol": "X1-GN67-A2",
+        "submittedBy": "AEGIS",
+        "submittedOn": "2025-08-24T13: 01: 13.746Z"
+      }
+    },
+    {
+      "symbol": "X1-GN67-C41",
+      "type": "ORBITAL_STATION",
+      "systemSymbol": "X1-GN67",
+      "x": 142,
+      "y": 60,
+      "orbitals": [],
+      "traits": [
+        {
+          "symbol": "OUTPOST",
+          "name": "Outpost",
+          "description": "A small, remote settlement providing essential services and a safe haven for travelers passing through."
+        },
+        {
+          "symbol": "INDUSTRIAL",
+          "name": "Industrial",
+          "description": "A waypoint dominated by factories, refineries, and other heavy industries, often accompanied by pollution and a bustling workforce."
+        },
+        {
+          "symbol": "MARKETPLACE",
+          "name": "Marketplace",
+          "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+        },
+        {
+          "symbol": "SHIPYARD",
+          "name": "Shipyard",
+          "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+        }
+      ],
+      "isUnderConstruction": false,
+      "orbits": "X1-GN67-C40",
+      "faction": {
+        "symbol": "AEGIS"
+      },
+      "modifiers": [],
+      "chart": {
+        "waypointSymbol": "X1-GN67-C41",
+        "submittedBy": "AEGIS",
+        "submittedOn": "2025-08-24T13: 01: 13.746Z"
+      }
+    },
+    {
+      "symbol": "X1-GN67-H55",
+      "type": "MOON",
+      "systemSymbol": "X1-GN67",
+      "x": 6,
+      "y": -46,
+      "orbitals": [],
+      "traits": [
+        {
+          "symbol": "FROZEN",
+          "name": "Frozen",
+          "description": "An ice-covered world with frigid temperatures, providing unique research opportunities and resources such as ice water, ammonia ice, and other frozen compounds."
+        },
+        {
+          "symbol": "SPRAWLING_CITIES",
+          "name": "Sprawling Cities",
+          "description": "Expansive urban centers that stretch across the landscape, boasting advanced infrastructure and diverse populations."
+        },
+        {
+          "symbol": "CORROSIVE_ATMOSPHERE",
+          "name": "Corrosive Atmosphere",
+          "description": "A hostile environment with an atmosphere that can rapidly degrade materials and equipment, requiring advanced engineering solutions to ensure the safety and longevity of structures and vehicles."
+        },
+        {
+          "symbol": "TERRAFORMED",
+          "name": "Terraformed",
+          "description": "A waypoint that has been artificially transformed to support life, showcasing the engineering prowess of its inhabitants and providing a hospitable environment for colonization."
+        },
+        {
+          "symbol": "INDUSTRIAL",
+          "name": "Industrial",
+          "description": "A waypoint dominated by factories, refineries, and other heavy industries, often accompanied by pollution and a bustling workforce."
+        },
+        {
+          "symbol": "MARKETPLACE",
+          "name": "Marketplace",
+          "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+        },
+        {
+          "symbol": "SHIPYARD",
+          "name": "Shipyard",
+          "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+        }
+      ],
+      "isUnderConstruction": false,
+      "orbits": "X1-GN67-H54",
+      "faction": {
+        "symbol": "AEGIS"
+      },
+      "modifiers": [],
+      "chart": {
+        "waypointSymbol": "X1-GN67-H55",
+        "submittedBy": "AEGIS",
+        "submittedOn": "2025-08-24T13: 01: 13.746Z"
+      }
+    }
+  ],
+  "meta": {
+    "total": 3,
+    "page": 1,
+    "limit": 10
+  }
+}
