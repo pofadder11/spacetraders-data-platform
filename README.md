@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 3. Configure
 
-Edit `config.yaml` with your API token and DB connection string.
+Edit `.env` with your API token and DB connection string.
 
 4. Initialize database
 
@@ -57,13 +57,13 @@ python scripts/init_db.py
 5. Run ETL
 
 ```python
-python scripts/run_etl.py
+python scripts/run_etl.py #not implemented yet
 ```
 
 6. Launch dashboard
 
 ```bash
-streamlit run dashboards/streamlit_app.py
+streamlit run dashboards/streamlit_app.py #not implemented yet
 ```
 
 ---
