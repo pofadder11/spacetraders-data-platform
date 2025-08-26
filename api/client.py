@@ -96,8 +96,9 @@ class SpaceTradersClient:
         )
 
     def list_shipyard_ships(
-        self, system_symbol: str, waypoint_symbol: str
+        self, waypoint_symbol: str, system_symbol: Optional[str] = None
     ) -> Dict[str, Any]:
+        system_symbol = system_symbol or self.system_symbol
         endpoint = f"systems/{system_symbol}/waypoints/{waypoint_symbol}/shipyard"
         return self._request("GET", endpoint)
 

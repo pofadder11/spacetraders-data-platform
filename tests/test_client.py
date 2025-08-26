@@ -24,11 +24,14 @@ client = SpaceTradersClient()
 
 
 # client.dock_ship("JANKNESS-1")
-
+"""
 print("Dock: ", client.dock_ship("JANKNESS-1"))
 print("Refuel: ", client.refuel_ship("JANKNESS-1"))
 print("Orbit: ", client.orbit_ship("JANKNESS-1"))
 nav_wayp = client.navigate_ship("JANKNESS-1", "X1-GN67-A2")
 print("Navigation result:", nav_wayp)
+"""
+print("Shipyard ships", client.list_shipyard_ships("X1-GN67-A2"))
+# print("Shipyards :", client.list_shipyards())
 
 # print("Ships:", client.list_ships())
