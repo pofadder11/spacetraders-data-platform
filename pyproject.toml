@@ -7,7 +7,7 @@ name = "spacetraders-data-platform"
 version = "0.1.0"
 description = "A client and tools for interacting with the SpaceTraders API"
 authors = [
-    { name = "Your Name", email = "you@example.com" }
+    { name = "-", email = "-@-" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,7 +23,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "flake8",
     "isort",
     "black",
     "mypy",
