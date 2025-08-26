@@ -150,7 +150,7 @@ class SpaceTradersClient:
 
     def accept_contract(self, contract_id: str) -> Dict[str, Any]:
         """Accept a contract by its ID."""
-        endpoint = f"my/contracts/{contract_id}/accept"
+        endpoint = f'my/contracts/"{contract_id}"/accept'
         return self._request("POST", endpoint)
 
     # -----------------------------
@@ -179,3 +179,24 @@ class SpaceTradersClient:
         endpoint = "my/ships"
         payload = {"shipType": ship_type, "waypointSymbol": waypoint_symbol}
         return self._request("POST", endpoint, json=payload)
+
+    def navigate_ship(self, ship_symbol: str, waypoint_symbol: str) -> Dict[str, Any]:
+        """Navigate a ship to a target waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/navigate"
+        payload = {"waypointSymbol": waypoint_symbol}
+        return self._request("POST", endpoint, json=payload)
+
+    def dock_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Dock a ship at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/dock"
+        return self._request("POST", endpoint)
+
+    def orbit_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Place a ship into orbit at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/orbit"
+        return self._request("POST", endpoint)
+
+    def refuel_ship(self, ship_symbol: str) -> Dict[str, Any]:
+        """Refuel a ship at its current waypoint."""
+        endpoint = f"my/ships/{ship_symbol}/refuel"
+        return self._request("POST", endpoint)
