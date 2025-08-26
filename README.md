@@ -1,10 +1,10 @@
-````markdown
+
 # spacetraders-data-platform
 fullstack datascience sandbox
 ----------------------------
 
 A modular data platform built around the [SpaceTraders API](https://spacetraders.io/), designed as a learning project for data engineering and data science.  
-It demonstrates **API integration, ETL pipelines, SQL databases, analytics, visualization, and testing** — all with production-style structure (to serve as a learning environment for ).
+It demonstrates **API integration, ETL pipelines, SQL databases, analytics, visualization, and testing** using (hopefully) software-development-industry relevant tools and methodologies.
 
 ---
 
@@ -41,12 +41,11 @@ cd spacetraders-data-platform
 ```bash
 python -m venv venv
 source venv/bin/activate   # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
 ```
 
 3. Configure
 
-Edit `config.yaml` with your API token and DB connection string.
+Edit `.env` with your API token and DB connection string.
 
 4. Initialize database
 
@@ -57,13 +56,13 @@ python scripts/init_db.py
 5. Run ETL
 
 ```python
-python scripts/run_etl.py
+python scripts/run_etl.py #tbd
 ```
 
 6. Launch dashboard
 
 ```bash
-streamlit run dashboards/streamlit_app.py
+streamlit run dashboards/streamlit_app.py #tbd
 ```
 
 ---
@@ -82,7 +81,4 @@ Lint and check formatting:
 ruff
 isort
 black --check
-```
-
-```
 ```
