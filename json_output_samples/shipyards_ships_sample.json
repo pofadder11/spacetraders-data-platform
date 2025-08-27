@@ -1,0 +1,270 @@
+{
+    "data": {
+        "symbol": "X1-GN67-A2",
+        "shipTypes": [
+            {
+                "type": "SHIP_PROBE"
+            },
+            {
+                "type": "SHIP_LIGHT_SHUTTLE"
+            },
+            {
+                "type": "SHIP_LIGHT_HAULER"
+            }
+        ],
+        "modificationsFee": 100,
+        "transactions": [],
+        "ships": [
+            {
+                "type": "SHIP_PROBE",
+                "name": "Probe Satellite",
+                "description": "A small, unmanned spacecraft that can be launched into orbit to gather data and perform basic tasks.",
+                "supply": "ABUNDANT",
+                "purchasePrice": 20496,
+                "frame": {
+                    "symbol": "FRAME_PROBE",
+                    "name": "Probe",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A small, unmanned spacecraft used for exploration, reconnaissance, and scientific research.",
+                    "moduleSlots": 0,
+                    "mountingPoints": 0,
+                    "fuelCapacity": 0,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "reactor": {
+                    "symbol": "REACTOR_SOLAR_I",
+                    "name": "Solar Reactor I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic solar power reactor, used to generate electricity from solar energy.",
+                    "powerOutput": 3,
+                    "requirements": {
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "engine": {
+                    "symbol": "ENGINE_IMPULSE_DRIVE_I",
+                    "name": "Impulse Drive I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic low-energy propulsion system that generates thrust for interplanetary travel.",
+                    "speed": 9,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "modules": [],
+                "mounts": [],
+                "crew": {
+                    "required": 0,
+                    "capacity": 0
+                },
+                "activity": "GROWING"
+            },
+            {
+                "type": "SHIP_LIGHT_SHUTTLE",
+                "name": "Light Shuttle",
+                "description": "The light shuttle is a versatile spacecraft designed for exploration, diplomacy, and light cargo transport. With its compact size and agile maneuverability, the shuttle is capable of navigating through tight spaces and challenging environments.",
+                "supply": "MODERATE",
+                "purchasePrice": 94821,
+                "frame": {
+                    "symbol": "FRAME_SHUTTLE",
+                    "name": "Shuttle",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A small, reusable spacecraft designed for short-range, low-speed travel between spacecraft or planetary surfaces.",
+                    "moduleSlots": 3,
+                    "mountingPoints": 1,
+                    "fuelCapacity": 300,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 10
+                    },
+                    "quality": 3
+                },
+                "reactor": {
+                    "symbol": "REACTOR_CHEMICAL_I",
+                    "name": "Chemical Reactor I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic chemical power reactor, used to generate electricity from chemical reactions.",
+                    "powerOutput": 15,
+                    "requirements": {
+                        "crew": 3
+                    },
+                    "quality": 3
+                },
+                "engine": {
+                    "symbol": "ENGINE_ION_DRIVE_I",
+                    "name": "Ion Drive I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "An advanced propulsion system that uses ionized particles to generate high-speed, low-thrust acceleration.",
+                    "speed": 15,
+                    "requirements": {
+                        "power": 3,
+                        "crew": 3
+                    },
+                    "quality": 3
+                },
+                "modules": [
+                    {
+                        "symbol": "MODULE_CARGO_HOLD_II",
+                        "name": "Expanded Cargo Hold",
+                        "description": "An expanded cargo hold module that provides more efficient storage space for a ship's cargo.",
+                        "requirements": {
+                            "power": 2,
+                            "crew": 2,
+                            "slots": 2
+                        },
+                        "capacity": 40
+                    },
+                    {
+                        "symbol": "MODULE_CREW_QUARTERS_I",
+                        "name": "Crew Quarters",
+                        "description": "A module that provides living space and amenities for the crew.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 2,
+                            "slots": 1
+                        },
+                        "capacity": 40
+                    }
+                ],
+                "mounts": [
+                    {
+                        "symbol": "MOUNT_TURRET_I",
+                        "name": "Rotary Cannon",
+                        "description": "A rotary cannon is a type of mounted turret that is designed to fire a high volume of rounds in rapid succession.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 1
+                        }
+                    }
+                ],
+                "crew": {
+                    "required": 21,
+                    "capacity": 40
+                },
+                "activity": "GROWING"
+            },
+            {
+                "type": "SHIP_LIGHT_HAULER",
+                "name": "Light Hauler",
+                "description": "A small, fast cargo ship that is designed for short-range transport of light loads.",
+                "supply": "HIGH",
+                "purchasePrice": 302583,
+                "frame": {
+                    "symbol": "FRAME_LIGHT_FREIGHTER",
+                    "name": "Light Freighter",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A small, versatile spacecraft used for cargo transport and other commercial operations.",
+                    "moduleSlots": 6,
+                    "mountingPoints": 1,
+                    "fuelCapacity": 600,
+                    "requirements": {
+                        "power": 5,
+                        "crew": 40
+                    },
+                    "quality": 5
+                },
+                "reactor": {
+                    "symbol": "REACTOR_CHEMICAL_I",
+                    "name": "Chemical Reactor I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic chemical power reactor, used to generate electricity from chemical reactions.",
+                    "powerOutput": 15,
+                    "requirements": {
+                        "crew": 3
+                    },
+                    "quality": 3
+                },
+                "engine": {
+                    "symbol": "ENGINE_ION_DRIVE_I",
+                    "name": "Ion Drive I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "An advanced propulsion system that uses ionized particles to generate high-speed, low-thrust acceleration.",
+                    "speed": 15,
+                    "requirements": {
+                        "power": 3,
+                        "crew": 3
+                    },
+                    "quality": 3
+                },
+                "modules": [
+                    {
+                        "symbol": "MODULE_CARGO_HOLD_II",
+                        "name": "Expanded Cargo Hold",
+                        "description": "An expanded cargo hold module that provides more efficient storage space for a ship's cargo.",
+                        "requirements": {
+                            "power": 2,
+                            "crew": 2,
+                            "slots": 2
+                        },
+                        "capacity": 40
+                    },
+                    {
+                        "symbol": "MODULE_CARGO_HOLD_II",
+                        "name": "Expanded Cargo Hold",
+                        "description": "An expanded cargo hold module that provides more efficient storage space for a ship's cargo.",
+                        "requirements": {
+                            "power": 2,
+                            "crew": 2,
+                            "slots": 2
+                        },
+                        "capacity": 40
+                    },
+                    {
+                        "symbol": "MODULE_CREW_QUARTERS_I",
+                        "name": "Crew Quarters",
+                        "description": "A module that provides living space and amenities for the crew.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 2,
+                            "slots": 1
+                        },
+                        "capacity": 40
+                    },
+                    {
+                        "symbol": "MODULE_CREW_QUARTERS_I",
+                        "name": "Crew Quarters",
+                        "description": "A module that provides living space and amenities for the crew.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 2,
+                            "slots": 1
+                        },
+                        "capacity": 40
+                    }
+                ],
+                "mounts": [
+                    {
+                        "symbol": "MOUNT_TURRET_I",
+                        "name": "Rotary Cannon",
+                        "description": "A rotary cannon is a type of mounted turret that is designed to fire a high volume of rounds in rapid succession.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 1
+                        }
+                    }
+                ],
+                "crew": {
+                    "required": 55,
+                    "capacity": 80
+                },
+                "activity": "GROWING"
+            }
+        ]
+    }
+}

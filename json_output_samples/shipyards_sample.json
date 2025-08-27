@@ -1,0 +1,167 @@
+{
+    "data": [
+        {
+            "symbol": "X1-PM2-A2",
+            "type": "MOON",
+            "systemSymbol": "X1-PM2",
+            "x": 18,
+            "y": 17,
+            "orbitals": [],
+            "traits": [
+                {
+                    "symbol": "FROZEN",
+                    "name": "Frozen",
+                    "description": "An ice-covered world with frigid temperatures, providing unique research opportunities and resources such as ice water, ammonia ice, and other frozen compounds."
+                },
+                {
+                    "symbol": "OUTPOST",
+                    "name": "Outpost",
+                    "description": "A small, remote settlement providing essential services and a safe haven for travelers passing through."
+                },
+                {
+                    "symbol": "TERRAFORMED",
+                    "name": "Terraformed",
+                    "description": "A waypoint that has been artificially transformed to support life, showcasing the engineering prowess of its inhabitants and providing a hospitable environment for colonization."
+                },
+                {
+                    "symbol": "STRONG_MAGNETOSPHERE",
+                    "name": "Strong Magnetosphere",
+                    "description": "A waypoint enveloped in a powerful magnetic field, potentially affecting spacecraft systems, and creating unique phenomena such as the concentration of exotic matter and graviton emitters."
+                },
+                {
+                    "symbol": "VIBRANT_AURORAS",
+                    "name": "Vibrant Auroras",
+                    "description": "A celestial light show caused by the interaction of charged particles with the waypoint's atmosphere, creating a mesmerizing spectacle and attracting tourists from across the galaxy."
+                },
+                {
+                    "symbol": "MARKETPLACE",
+                    "name": "Marketplace",
+                    "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+                },
+                {
+                    "symbol": "SHIPYARD",
+                    "name": "Shipyard",
+                    "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+                }
+            ],
+            "isUnderConstruction": false,
+            "orbits": "X1-PM2-A1",
+            "faction": {
+                "symbol": "AEGIS"
+            },
+            "modifiers": [],
+            "chart": {
+                "waypointSymbol": "X1-PM2-A2",
+                "submittedBy": "AEGIS",
+                "submittedOn": "2025-08-24T13:02:08.732Z"
+            }
+        },
+        {
+            "symbol": "X1-PM2-C37",
+            "type": "ORBITAL_STATION",
+            "systemSymbol": "X1-PM2",
+            "x": -115,
+            "y": -105,
+            "orbitals": [],
+            "traits": [
+                {
+                    "symbol": "OUTPOST",
+                    "name": "Outpost",
+                    "description": "A small, remote settlement providing essential services and a safe haven for travelers passing through."
+                },
+                {
+                    "symbol": "INDUSTRIAL",
+                    "name": "Industrial",
+                    "description": "A waypoint dominated by factories, refineries, and other heavy industries, often accompanied by pollution and a bustling workforce."
+                },
+                {
+                    "symbol": "MARKETPLACE",
+                    "name": "Marketplace",
+                    "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+                },
+                {
+                    "symbol": "SHIPYARD",
+                    "name": "Shipyard",
+                    "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+                }
+            ],
+            "isUnderConstruction": false,
+            "orbits": "X1-PM2-C36",
+            "faction": {
+                "symbol": "AEGIS"
+            },
+            "modifiers": [],
+            "chart": {
+                "waypointSymbol": "X1-PM2-C37",
+                "submittedBy": "AEGIS",
+                "submittedOn": "2025-08-24T13:02:08.732Z"
+            }
+        },
+        {
+            "symbol": "X1-PM2-H51",
+            "type": "MOON",
+            "systemSymbol": "X1-PM2",
+            "x": -24,
+            "y": 40,
+            "orbitals": [],
+            "traits": [
+                {
+                    "symbol": "BARREN",
+                    "name": "Barren",
+                    "description": "A desolate world with little to no vegetation or water, presenting unique challenges for habitation and resource extraction."
+                },
+                {
+                    "symbol": "OUTPOST",
+                    "name": "Outpost",
+                    "description": "A small, remote settlement providing essential services and a safe haven for travelers passing through."
+                },
+                {
+                    "symbol": "VIBRANT_AURORAS",
+                    "name": "Vibrant Auroras",
+                    "description": "A celestial light show caused by the interaction of charged particles with the waypoint's atmosphere, creating a mesmerizing spectacle and attracting tourists from across the galaxy."
+                },
+                {
+                    "symbol": "THIN_ATMOSPHERE",
+                    "name": "Thin Atmosphere",
+                    "description": "A location with a sparse atmosphere, making it difficult to support life without specialized life-support systems."
+                },
+                {
+                    "symbol": "EXTREME_TEMPERATURES",
+                    "name": "Extreme Temperatures",
+                    "description": "A waypoint with scorching heat or freezing cold, requiring specialized equipment and technology to survive and thrive in these harsh environments."
+                },
+                {
+                    "symbol": "INDUSTRIAL",
+                    "name": "Industrial",
+                    "description": "A waypoint dominated by factories, refineries, and other heavy industries, often accompanied by pollution and a bustling workforce."
+                },
+                {
+                    "symbol": "MARKETPLACE",
+                    "name": "Marketplace",
+                    "description": "A thriving center of commerce where traders from across the galaxy gather to buy, sell, and exchange goods."
+                },
+                {
+                    "symbol": "SHIPYARD",
+                    "name": "Shipyard",
+                    "description": "A bustling hub for the construction, repair, and sale of various spacecraft, from humble shuttles to mighty warships."
+                }
+            ],
+            "isUnderConstruction": false,
+            "orbits": "X1-PM2-H50",
+            "faction": {
+                "symbol": "AEGIS"
+            },
+            "modifiers": [],
+            "chart": {
+                "waypointSymbol": "X1-PM2-H51",
+                "submittedBy": "AEGIS",
+                "submittedOn": "2025-08-24T13:02:08.732Z"
+            }
+        }
+    ],
+    "meta": {
+        "total": 3,
+        "page": 1,
+        "limit": 10
+    }
+}
