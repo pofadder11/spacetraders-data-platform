@@ -21,14 +21,9 @@ cur = conn.cursor()
 # -----------------------------
 # ETL: Full refresh
 # -----------------------------
-system_symbol = client.system_symbol
-normalize_waypoints(conn, client.list_waypoints(system_symbol))
-
-shipyards_json = client.list_shipyards(system_symbol)
-normalize_shipyards(conn, shipyards_json)
-
-fleet_json = client.list_ships()
-normalize_fleet(conn, fleet_json)
+normalize_waypoints(conn, client.list_waypoints())
+normalize_shipyards(conn, client.list_shipyards())
+normalize_fleet(conn, client.list_ships())
 
 
 # -----------------------------
@@ -37,9 +32,10 @@ normalize_fleet(conn, fleet_json)
 def prepare_ship_for_navigation(ship_symbol: str):
     cur.execute(
         """
-        SELECT status, fuel_current, fuel_capacity
-        FROM fleet_nav
-        WHERE ship_symbol = ?
+        SELECT fn.status, fs.fuel_current, fs.fuel_capacity
+        FROM fleet_nav fn
+        JOIN fleet_specs fs ON fn.ship_symbol = fs.ship_symbol
+        WHERE fn.ship_symbol = ?
         """,
         (ship_symbol,),
     )
@@ -67,10 +63,10 @@ def prepare_ship_for_navigation(ship_symbol: str):
 # -----------------------------
 cur.execute(
     """
-    SELECT fs.ship_symbol
+    SELECT fs.symbol
     FROM fleet_specs fs
     JOIN fleet_nav fn ON fs.ship_symbol = fn.ship_symbol
-    WHERE fn.status IN ('IN_ORBIT', 'DOCKED') AND fn.fuel_current > 0
+    WHERE fn.status IN ('IN_ORBIT', 'DOCKED') AND fs.fuel_current > 0
     ORDER BY fs.engine_speed DESC
     LIMIT 1
     """
@@ -122,7 +118,7 @@ for waypoint_symbol, full_shipyard_symbol in shipyard_rows:
         if "-" in full_shipyard_symbol
         else full_shipyard_symbol
     )
-    ships_json = client.list_shipyard_ships(system_symbol, api_shipyard_symbol)
+    ships_json = client.list_shipyard_ships(api_shipyard_symbol)
     normalize_shipyard_ships(conn, ships_json, full_shipyard_symbol)
     print(f"[INFO] Refreshed shipyard_ships for {full_shipyard_symbol}")
 

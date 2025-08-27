@@ -107,7 +107,7 @@ def normalize_fleet(conn: sqlite3.Connection, fleet_json: Dict[str, Any]):
                 specs.update(
                     flatten_dict(specs.pop(nested_field), parent_key=nested_field)
                 )
-        specs["symbol"] = ship_symbol
+        specs["ship_symbol"] = ship_symbol
         specs_records.append(specs)
 
         # -----------------------
