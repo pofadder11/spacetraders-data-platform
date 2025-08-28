@@ -111,16 +111,33 @@ def normalize_fleet(conn: sqlite3.Connection, fleet_json: Dict[str, Any]):
         specs_records.append(specs)
 
         # -----------------------
-        # fleet_nav
+    # fleet_nav
+    # -----------------------
+    if "nav" in ship:
+        nav_data = flatten_dict(ship["nav"])
+
+        # Convert lists to JSON strings
+        for k, v in nav_data.items():
+            if isinstance(v, list):
+                nav_data[k] = json.dumps(v)
+
+        nav_data["ship_symbol"] = ship_symbol
+
         # -----------------------
-        if "nav" in ship:
-            nav_data = flatten_dict(ship["nav"])
-            # Convert lists to JSON strings
-            for k, v in nav_data.items():
-                if isinstance(v, list):
-                    nav_data[k] = json.dumps(v)
-            nav_data["ship_symbol"] = ship_symbol
-            nav_records.append(nav_data)
+        # Add missing fields with defaults
+        # -----------------------
+        cargo = ship.get("cargo", {})
+        nav_data["cargo_capacity"] = cargo.get("capacity", 0)
+        nav_data["cargo_units"] = cargo.get("units", 0)
+
+        fuel = ship.get("fuel", {})
+        nav_data["fuel_current"] = fuel.get("current", 0)
+        nav_data["fuel_capacity"] = fuel.get("capacity", 0)
+
+        cooldown = ship.get("cooldown", {})
+        nav_data["cooldown_remaining_seconds"] = cooldown.get("remainingSeconds", 0)
+
+        nav_records.append(nav_data)
 
         # -----------------------
         # fleet_modules

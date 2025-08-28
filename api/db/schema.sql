@@ -25,19 +25,13 @@ CREATE TABLE IF NOT EXISTS shipyards (
     faction_symbol TEXT
 );
 
--- -----------------------------
--- Ships available in shipyards
--- -----------------------------
 CREATE TABLE IF NOT EXISTS shipyard_ships (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    waypoint_symbol TEXT NOT NULL,
-    ship_type TEXT NOT NULL,
-    purchase_price INTEGER,
-    quality INTEGER,
-    supply TEXT,
-    reactor_symbol TEXT,
-    engine_symbol TEXT,
-    FOREIGN KEY (waypoint_symbol) REFERENCES waypoints(symbol)
+    shipyard_symbol TEXT,
+    ship_type TEXT,
+    cost INTEGER,
+    other_details TEXT,
+    PRIMARY KEY (shipyard_symbol, ship_type),
+    FOREIGN KEY (shipyard_symbol) REFERENCES shipyards(shipyard_symbol)
 );
 
 -- -----------------------------
@@ -57,10 +51,12 @@ CREATE TABLE IF NOT EXISTS fleet_nav (
     route_destination_type TEXT,
     status TEXT,
     flight_mode TEXT,
-    fuel_current INTEGER,
-    fuel_capacity INTEGER,
     cargo_capacity INTEGER,
     cargo_units INTEGER,
+    fuel_current INTEGER,
+    fuel_capacity INTEGER,
+    
+
     cooldown_remaining_seconds INTEGER
 );
 
@@ -71,20 +67,43 @@ CREATE TABLE IF NOT EXISTS fleet_specs (
     frame_name TEXT,
     frame_condition REAL,
     frame_integrity REAL,
-    frame_module_slots INTEGER,
-    frame_mounting_points INTEGER,
+    frame_description TEXT,
+    frame_moduleSlots INTEGER,
+    frame_mountingPoints INTEGER,
+    frame_fuelCapacity INTEGER,
+    frame_requirements_power INTEGER,
+    frame_requirements_crew INTEGER,
+    frame_quality INTEGER,
     reactor_symbol TEXT,
     reactor_name TEXT,
-    reactor_power_output REAL,
+    reactor_condition REAL,
+    reactor_integrity REAL,
+    reactor_description TEXT,
+    reactor_powerOutput REAL,
+    reactor_requirements_crew INTEGER,
+    reactor_quality INTEGER,
     engine_symbol TEXT,
     engine_name TEXT,
+    engine_condition REAL,
+    engine_integrity REAL,
+    engine_description TEXT,
     engine_speed REAL,
+    engine_requirements_power INTEGER,
+    engine_requirements_crew INTEGER,
+    engine_quality INTEGER,
+    registration_name TEXT,
+    registration_factionSymbol TEXT,
+    registration_role TEXT,
     crew_current INTEGER,
     crew_required INTEGER,
     crew_capacity INTEGER,
     crew_rotation TEXT,
     crew_morale REAL,
-    quality INTEGER
+    cargo_capacity INTEGER,
+    cargo_units INTEGER,
+    fuel_current INTEGER,
+    fuel_capacity INTEGER,
+    cooldown_remainingSeconds INTEGER
 );
 
 -- -----------------------------
