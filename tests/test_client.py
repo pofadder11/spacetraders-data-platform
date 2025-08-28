@@ -1,4 +1,7 @@
+import sqlite3
+
 from api.client import SpaceTradersClient
+from api.normalizer import normalize_contracts
 
 # Initialize the client
 
@@ -8,6 +11,8 @@ client = SpaceTradersClient()
 # print("Negotiable contracts:", negotiate)
 
 contracts = client.list_contracts()
+conn = sqlite3.connect("spacetraders.db")
+normalize_contracts(conn, contracts)
 # contract_id = contracts['data'][0]['id']
 # print("First contract ID:", contract_id)
 # print("Contracts:", contracts)

@@ -142,3 +142,20 @@ CREATE TABLE IF NOT EXISTS fleet_cargo (
     PRIMARY KEY (ship_symbol),
     FOREIGN KEY (ship_symbol) REFERENCES fleet_specs(ship_symbol)
 );
+
+-- -----------------------------
+-- Contracts
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS contracts (
+    PRIMARY KEY (contract_id),
+    type TEXT,
+    deadline TEXT,
+    payment_on_accept INTEGER,
+    payment_on_complete INTEGER,
+    accepted INTEGER,
+    fulfilled INTEGER,
+    trade_symbol TEXT,
+    destination_symbol TEXT,
+    units_required INTEGER,
+    units_fulfilled INTEGER
+);
