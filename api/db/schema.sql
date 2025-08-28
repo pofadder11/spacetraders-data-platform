@@ -25,13 +25,19 @@ CREATE TABLE IF NOT EXISTS shipyards (
     faction_symbol TEXT
 );
 
+-- -----------------------------
+-- Ships available in shipyards
+-- -----------------------------
 CREATE TABLE IF NOT EXISTS shipyard_ships (
-    shipyard_symbol TEXT,
-    ship_type TEXT,
-    cost INTEGER,
-    other_details TEXT,
-    PRIMARY KEY (shipyard_symbol, ship_type),
-    FOREIGN KEY (shipyard_symbol) REFERENCES shipyards(shipyard_symbol)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    waypoint_symbol TEXT NOT NULL,
+    ship_type TEXT NOT NULL,
+    purchase_price INTEGER,
+    quality INTEGER,
+    supply TEXT,
+    reactor_symbol TEXT,
+    engine_symbol TEXT,
+    FOREIGN KEY (waypoint_symbol) REFERENCES waypoints(symbol)
 );
 
 -- -----------------------------

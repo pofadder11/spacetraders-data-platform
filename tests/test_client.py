@@ -43,7 +43,7 @@ conn = sqlite3.connect("spacetraders.db")
 # normalize_fleet(conn, client.list_ships())
 # normalize_shipyards(conn, client.list_shipyards())
 # normalize_waypoints(conn, client.list_waypoints(client.system_symbol))
-normalize_shipyard_ships(conn, client.list_shipyard_ships())
+normalize_shipyard_ships(conn, client.list_shipyard_ships("X1-NM89-C44"))
 
 
 # print("Ships:", client.list_ships())

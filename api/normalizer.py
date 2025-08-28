@@ -230,33 +230,39 @@ def normalize_shipyards(conn: sqlite3.Connection, shipyards_json: List[Dict[str,
 
 
 # --- Shipyard Ships ---
-def normalize_shipyard_ships(
-    conn: sqlite3.Connection, shipyard_ships_json: List[Dict[str, Any]]
-):
-    """Normalize available ships in a shipyard into shipyard_ships table."""
-    shipyard_ships_data = shipyard_ships_json.get("data", shipyard_ships_json)
-    if isinstance(shipyard_ships_data, dict):
-        shipyard_ships_data = [shipyard_ships_data]
-    elif not isinstance(shipyard_ships_data, list):
-        print("[WARNING] Unexpected fleet data format, skipping normalization.")
+def normalize_shipyard_ships(conn: sqlite3.Connection, shipyard_json: dict):
+    """
+    Normalize shipyard ships JSON into shipyard_ships table.
+
+    Columns: waypoint_symbol, ship_type, purchase_price, quality, supply, reactor_symbol, engine_symbol
+    """
+    ships_data = shipyard_json.get("data", shipyard_json)
+    waypoint_symbol = ships_data.get("symbol")
+
+    records = []
+
+    for ship in ships_data.get("ships", []):
+        record = {
+            "waypoint_symbol": waypoint_symbol,
+            "ship_type": ship.get("type"),
+            "purchase_price": ship.get("purchasePrice"),
+            "quality": ship.get("frame", {}).get("quality"),
+            "supply": ship.get("supply"),
+            "reactor_symbol": ship.get("reactor", {}).get("symbol"),
+            "engine_symbol": ship.get("engine", {}).get("symbol"),
+        }
+        records.append(record)
+
+    if not records:
+        print(f"[INFO] No ships found for shipyard at {waypoint_symbol}")
         return
 
-    ship_records = []
-
-    for s in shipyard_ships_data:
-        record = {
-            "shipyard_symbol": s.get("shipyardSymbol"),
-            "ship_type": s.get("type"),
-            "cost": s.get("purchasePrice"),
-            # Dump everything else as JSON for "other_details"
-            "other_details": json.dumps(
-                {
-                    k: v
-                    for k, v in s.items()
-                    if k not in ["shipyardSymbol", "type", "purchasePrice"]
-                }
-            ),
-        }
-        ship_records.append(record)
-
-    write_to_db(conn, "shipyard_ships", ship_records)
+    # Write to DB
+    try:
+        df = pd.DataFrame(records)
+        df.to_sql("shipyard_ships", conn, if_exists="append", index=False)
+        print(
+            f"[INFO] shipyard_ships updated for waypoint {waypoint_symbol} ({len(df)} records)"
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to write shipyard_ships: {e}")

@@ -1,9 +1,9 @@
 # run_startup.py
+import sqlite3
 import time
 from datetime import datetime
 
 from api.client import SpaceTradersClient
-from api.db.init_db import init_db
 from api.normalizer import (
     normalize_fleet,
     normalize_shipyard_ships,
@@ -15,7 +15,7 @@ from api.normalizer import (
 # Setup
 # -----------------------------
 client = SpaceTradersClient()
-conn = init_db("spacetraders.db")
+conn = sqlite3.connect("spacetraders.db")
 cur = conn.cursor()
 
 # -----------------------------
@@ -30,6 +30,7 @@ normalize_fleet(conn, client.list_ships())
 # Helper: Prepare ship for navigation
 # -----------------------------
 def prepare_ship_for_navigation(ship_symbol: str):
+    normalize_fleet(conn, client.list_ships())
     cur.execute(
         """
         SELECT fn.status, fs.fuel_current, fs.fuel_capacity
@@ -45,19 +46,21 @@ def prepare_ship_for_navigation(ship_symbol: str):
 
     status, fuel_current, fuel_capacity = row
 
-    if status != "DOCKED":
-        print(f"[INFO] Docking {ship_symbol} (status: {status})")
-        client.dock_ship(ship_symbol)
-
     if fuel_current < fuel_capacity:
-        print(f"[INFO] Refueling {ship_symbol} ({fuel_current}/{fuel_capacity})")
-        client.refuel_ship(ship_symbol)
+        if status != "DOCKED":
+            print(f"[INFO] Docking {ship_symbol} (status: {status})")
+            client.dock_ship(ship_symbol)
+            time.sleep(2)  # wait for docking to complete
+            print(f"[INFO] Refueling {ship_symbol} ({fuel_current}/{fuel_capacity})")
+            client.refuel_ship(ship_symbol)
 
     if status != "IN_ORBIT":
         print(f"[INFO] Orbiting {ship_symbol} (status: {status})")
         client.orbit_ship(ship_symbol)
 
 
+conn.row_factory = sqlite3.Row
+cur = conn.cursor()
 # -----------------------------
 # Select fastest available ship
 # -----------------------------
@@ -79,28 +82,45 @@ ship_symbol = row[0]
 prepare_ship_for_navigation(ship_symbol)
 
 # -----------------------------
-# Fetch shipyard waypoints (limit 3)
+# Fetch shipyard symbols (limit 3)
 # -----------------------------
-cur.execute("SELECT waypoint_symbol, shipyard_symbol FROM shipyards LIMIT 3")
-shipyard_rows = cur.fetchall()
+cur.execute("SELECT shipyard_symbol FROM shipyards LIMIT 3")
+shipyard_symbols = [row["shipyard_symbol"] for row in cur.fetchall()]
 
-for waypoint_symbol, full_shipyard_symbol in shipyard_rows:
+for shipyard_symbol in shipyard_symbols:
+    # -----------------------------
+    # Fetch current waypoint and status for the ship
+    # -----------------------------
+    cur.execute(
+        "SELECT waypointSymbol, status FROM fleet_nav WHERE ship_symbol = ?",
+        (ship_symbol,),
+    )
+    row = cur.fetchone()
+    if not row:
+        print(f"[WARNING] No fleet_nav entry for {ship_symbol}, skipping")
+        continue
+
+    current_wp = row["waypointSymbol"]
+    status = row["status"]
+    print(
+        f"[INFO] Current waypoint for {ship_symbol} is {current_wp} (status: {status})"
+    )
 
     # -----------------------------
     # Skip navigation if already at this waypoint
     # -----------------------------
-    cur.execute(
-        "SELECT waypoint_symbol FROM fleet_nav WHERE ship_symbol = ?",
-        (ship_symbol,),
-    )
-    current_wp = cur.fetchone()[0]
-    if current_wp == waypoint_symbol:
+    if current_wp == shipyard_symbol:
         print(
-            f"[INFO] Ship {ship_symbol} already at {waypoint_symbol}, skipping navigation"
+            f"[INFO] Ship {ship_symbol} already at {shipyard_symbol}, skipping navigation"
         )
     else:
-        print(f"[INFO] Navigating {ship_symbol} to {waypoint_symbol}")
-        nav_resp = client.navigate_ship(ship_symbol, waypoint_symbol)
+        # -----------------------------
+        # Navigate ship
+        # -----------------------------
+        print(
+            f"[DEBUG] Attempting to navigate {ship_symbol} from {current_wp} → {shipyard_symbol}"
+        )
+        nav_resp = client.navigate_ship(ship_symbol, shipyard_symbol)
 
         # Parse route timestamps
         route = nav_resp["data"]["nav"]["route"]
@@ -110,17 +130,12 @@ for waypoint_symbol, full_shipyard_symbol in shipyard_rows:
         print(f"[INFO] Travel time: {travel_seconds:.1f} seconds")
         time.sleep(travel_seconds + 1)
 
-    # -----------------------------
-    # Refresh shipyard_ships for this waypoint
-    # -----------------------------
-    api_shipyard_symbol = (
-        full_shipyard_symbol.split("-", 1)[1]
-        if "-" in full_shipyard_symbol
-        else full_shipyard_symbol
-    )
-    ships_json = client.list_shipyard_ships(api_shipyard_symbol)
-    normalize_shipyard_ships(conn, ships_json, full_shipyard_symbol)
-    print(f"[INFO] Refreshed shipyard_ships for {full_shipyard_symbol}")
+        # -----------------------------
+        # Refresh shipyard_ships for this waypoint
+        # -----------------------------
+        print(f"[INFO] Fetching shipyard_ships for {shipyard_symbol}")
+        normalize_shipyard_ships(conn, client.list_shipyard_ships(shipyard_symbol))
+        print(f"[INFO] Refreshed shipyard_ships for {shipyard_symbol}")
 
 conn.close()
 print("[INFO] Startup orchestration complete.")

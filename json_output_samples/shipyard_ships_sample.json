@@ -1,0 +1,158 @@
+{
+    "data": {
+        "symbol": "X1-PM2-C37",
+        "shipTypes": [
+            {
+                "type": "SHIP_PROBE"
+            },
+            {
+                "type": "SHIP_SIPHON_DRONE"
+            }
+        ],
+        "modificationsFee": 100,
+        "transactions": [],
+        "ships": [
+            {
+                "type": "SHIP_PROBE",
+                "name": "Probe Satellite",
+                "description": "A small, unmanned spacecraft that can be launched into orbit to gather data and perform basic tasks.",
+                "supply": "HIGH",
+                "purchasePrice": 23834,
+                "frame": {
+                    "symbol": "FRAME_PROBE",
+                    "name": "Probe",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A small, unmanned spacecraft used for exploration, reconnaissance, and scientific research.",
+                    "moduleSlots": 0,
+                    "mountingPoints": 0,
+                    "fuelCapacity": 0,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "reactor": {
+                    "symbol": "REACTOR_SOLAR_I",
+                    "name": "Solar Reactor I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic solar power reactor, used to generate electricity from solar energy.",
+                    "powerOutput": 3,
+                    "requirements": {
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "engine": {
+                    "symbol": "ENGINE_IMPULSE_DRIVE_I",
+                    "name": "Impulse Drive I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic low-energy propulsion system that generates thrust for interplanetary travel.",
+                    "speed": 9,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "modules": [],
+                "mounts": [],
+                "crew": {
+                    "required": 0,
+                    "capacity": 0
+                },
+                "activity": "GROWING"
+            },
+            {
+                "type": "SHIP_SIPHON_DRONE",
+                "name": "Mining Drone",
+                "description": "A small, unmanned spacecraft that can be used for siphoning operations, such as extracting valuable gases from gas giants.",
+                "supply": "ABUNDANT",
+                "purchasePrice": 33978,
+                "frame": {
+                    "symbol": "FRAME_DRONE",
+                    "name": "Drone",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A small, unmanned spacecraft used for various tasks, such as surveillance, transportation, or combat.",
+                    "moduleSlots": 3,
+                    "mountingPoints": 2,
+                    "fuelCapacity": 80,
+                    "requirements": {
+                        "power": 1,
+                        "crew": -4
+                    },
+                    "quality": 1
+                },
+                "reactor": {
+                    "symbol": "REACTOR_CHEMICAL_I",
+                    "name": "Chemical Reactor I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic chemical power reactor, used to generate electricity from chemical reactions.",
+                    "powerOutput": 15,
+                    "requirements": {
+                        "crew": 3
+                    },
+                    "quality": 3
+                },
+                "engine": {
+                    "symbol": "ENGINE_IMPULSE_DRIVE_I",
+                    "name": "Impulse Drive I",
+                    "condition": 1,
+                    "integrity": 1,
+                    "description": "A basic low-energy propulsion system that generates thrust for interplanetary travel.",
+                    "speed": 9,
+                    "requirements": {
+                        "power": 1,
+                        "crew": 0
+                    },
+                    "quality": 1
+                },
+                "modules": [
+                    {
+                        "symbol": "MODULE_CARGO_HOLD_I",
+                        "name": "Cargo Hold",
+                        "description": "A module that increases a ship's cargo capacity.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 0,
+                            "slots": 1
+                        },
+                        "capacity": 15
+                    },
+                    {
+                        "symbol": "MODULE_GAS_PROCESSOR_I",
+                        "name": "Gas Processor",
+                        "description": "Filters and processes extracted gases into their component parts, filters out impurities, and containerizes them into raw storage units.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 0,
+                            "slots": 2
+                        }
+                    }
+                ],
+                "mounts": [
+                    {
+                        "symbol": "MOUNT_GAS_SIPHON_I",
+                        "name": "Gas Siphon I",
+                        "description": "A basic gas siphon that can extract gas and other resources from gas giants and other gas-rich bodies.",
+                        "requirements": {
+                            "power": 1,
+                            "crew": 0
+                        },
+                        "strength": 10
+                    }
+                ],
+                "crew": {
+                    "required": -1,
+                    "capacity": 0
+                },
+                "activity": "GROWING"
+            }
+        ]
+    }
+}
