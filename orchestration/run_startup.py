@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 
 from api.client import SpaceTradersClient
+from api.db.pipeline import SpaceTradersDataManager
 from api.normalizer import (
     normalize_fleet,
     normalize_shipyard_ships,
@@ -17,6 +18,7 @@ from api.normalizer import (
 client = SpaceTradersClient()
 conn = sqlite3.connect("spacetraders.db")
 cur = conn.cursor()
+etl = SpaceTradersDataManager(client, conn)
 
 # -----------------------------
 # ETL: Full refresh
@@ -30,7 +32,7 @@ normalize_fleet(conn, client.list_ships())
 # Helper: Prepare ship for navigation
 # -----------------------------
 def prepare_ship_for_navigation(ship_symbol: str):
-    normalize_fleet(conn, client.list_ships())
+    etl.store_fleet()  # Refresh fleet data
     cur.execute(
         """
         SELECT fn.status, fs.fuel_current, fs.fuel_capacity
@@ -53,10 +55,14 @@ def prepare_ship_for_navigation(ship_symbol: str):
             time.sleep(2)  # wait for docking to complete
             print(f"[INFO] Refueling {ship_symbol} ({fuel_current}/{fuel_capacity})")
             client.refuel_ship(ship_symbol)
+            time.sleep(2)  # wait for refueling to complete
+            etl.store_fleet()  # Refresh fleet data
 
     if status != "IN_ORBIT":
         print(f"[INFO] Orbiting {ship_symbol} (status: {status})")
         client.orbit_ship(ship_symbol)
+        time.sleep(2)  # wait for orbiting to complete
+        etl.store_fleet()  # Refresh fleet data
 
 
 conn.row_factory = sqlite3.Row
@@ -78,8 +84,6 @@ row = cur.fetchone()
 if not row:
     raise RuntimeError("No available ship found for navigation")
 ship_symbol = row[0]
-
-prepare_ship_for_navigation(ship_symbol)
 
 # -----------------------------
 # Fetch shipyard symbols (limit 3)
@@ -120,7 +124,9 @@ for shipyard_symbol in shipyard_symbols:
         print(
             f"[DEBUG] Attempting to navigate {ship_symbol} from {current_wp} → {shipyard_symbol}"
         )
+        prepare_ship_for_navigation(ship_symbol)
         nav_resp = client.navigate_ship(ship_symbol, shipyard_symbol)
+        etl.store_fleet()  # Refresh fleet data
 
         # Parse route timestamps
         route = nav_resp["data"]["nav"]["route"]
@@ -133,9 +139,9 @@ for shipyard_symbol in shipyard_symbols:
         # -----------------------------
         # Refresh shipyard_ships for this waypoint
         # -----------------------------
-        print(f"[INFO] Fetching shipyard_ships for {shipyard_symbol}")
-        normalize_shipyard_ships(conn, client.list_shipyard_ships(shipyard_symbol))
-        print(f"[INFO] Refreshed shipyard_ships for {shipyard_symbol}")
+    print(f"[INFO] Fetching shipyard_ships for {shipyard_symbol}")
+    normalize_shipyard_ships(conn, client.list_shipyard_ships(shipyard_symbol))
+    print(f"[INFO] Refreshed shipyard_ships for {shipyard_symbol}")
 
 conn.close()
 print("[INFO] Startup orchestration complete.")

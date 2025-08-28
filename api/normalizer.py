@@ -63,8 +63,23 @@ def write_to_db(
         return
     try:
         df = pd.DataFrame(records)
+
+        # --- 1. Write to the main (state) table ---
         df.to_sql(table_name, conn, if_exists="replace", index=False)
         print(f"[INFO] {table_name} updated with {len(df)} records.")
+
+        # --- 2. Write to the log table (append-only) ---
+        log_table = f"{table_name}_log"
+
+        # ensure timestamp column is present
+        from datetime import datetime
+
+        df_log = df.copy()
+        df_log["timestamp"] = datetime.utcnow().isoformat()
+
+        df_log.to_sql(log_table, conn, if_exists="append", index=False)
+        print(f"[INFO] {log_table} appended with {len(df_log)} records.")
+
     except Exception as e:
         print(f"[ERROR] Failed to write {table_name}: {e}")
 

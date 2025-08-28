@@ -1,18 +1,27 @@
+# run_startup.py
 import sqlite3
 
 from api.client import SpaceTradersClient
-from api.normalizer import normalize_contracts
+from api.db.pipeline import SpaceTradersDataManager
 
-# Initialize the client
-
+# -----------------------------
+# Setup
+# -----------------------------
 client = SpaceTradersClient()
+conn = sqlite3.connect("spacetraders.db")
+cur = conn.cursor()
+etl = SpaceTradersDataManager(client, conn)
+etl.store_fleet()
+etl.store_contracts()
+
+# from config import DB_PATH
 
 # negotiate = client.negotiate_contract("JANKNESS-1")
 # print("Negotiable contracts:", negotiate)
 
-contracts = client.list_contracts()
-conn = sqlite3.connect("spacetraders.db")
-normalize_contracts(conn, contracts)
+# accept_contract = client.accept_contract("cmesgtjlkgjzjuo6yu3cjefqh")
+# conn = sqlite3.connect("spacetraders.db")
+# normalize_contracts(conn, contracts)
 # contract_id = contracts['data'][0]['id']
 # print("First contract ID:", contract_id)
 # print("Contracts:", contracts)
@@ -26,6 +35,7 @@ normalize_contracts(conn, contracts)
 # print("Waypoints:", waypoints)
 
 # print("Ships:", client.list_ships())
+# normalize_fleet(sqlite3.connect("spacetraders.db"), client.list_ships())
 
 
 # client.dock_ship("JANKNESS-1")
