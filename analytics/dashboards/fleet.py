@@ -8,4 +8,4 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = fleet_layout
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run(debug=True)

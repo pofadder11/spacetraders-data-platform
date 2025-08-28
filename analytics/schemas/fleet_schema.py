@@ -23,25 +23,25 @@ def load_fleet_data(db_path="spacetraders.db"):
             nav.systemSymbol AS system_symbol,
             nav.waypointSymbol AS waypoint_symbol,
             nav.status,
+            nav.cargo_units,
+            nav.cargo_capacity,
             nav.flightMode AS flight_mode,
             specs.fuel_current,
             specs.fuel_capacity,
-            specs.cargo_units,
-            specs.cargo_capacity,
             specs.cooldown_remainingSeconds AS cooldown_remaining_seconds,
             specs.frame_symbol,
             specs.frame_name,
             specs.frame_condition,
             specs.frame_integrity,
             specs.reactor_name,
-            specs.reactor_power_output,
+            specs.reactor_powerOutput,
             specs.engine_name,
             specs.engine_speed,
             specs.crew_current,
             specs.crew_required,
             specs.crew_capacity,
             specs.crew_morale,
-            specs.quality
+            specs.frame_quality
         FROM fleet_nav nav
         LEFT JOIN fleet_specs specs
         ON nav.ship_symbol = specs.ship_symbol
