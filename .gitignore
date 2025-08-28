@@ -207,3 +207,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# other files
+test_client.py
+spacetraders.db
+fix_json_folder.py
+cache.db
+spacetraders.db-journal
