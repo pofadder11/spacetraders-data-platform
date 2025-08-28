@@ -25,13 +25,19 @@ CREATE TABLE IF NOT EXISTS shipyards (
     faction_symbol TEXT
 );
 
+-- -----------------------------
+-- Ships available in shipyards
+-- -----------------------------
 CREATE TABLE IF NOT EXISTS shipyard_ships (
-    shipyard_symbol TEXT,
-    ship_type TEXT,
-    cost INTEGER,
-    other_details TEXT,
-    PRIMARY KEY (shipyard_symbol, ship_type),
-    FOREIGN KEY (shipyard_symbol) REFERENCES shipyards(shipyard_symbol)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    waypoint_symbol TEXT NOT NULL,
+    ship_type TEXT NOT NULL,
+    purchase_price INTEGER,
+    quality INTEGER,
+    supply TEXT,
+    reactor_symbol TEXT,
+    engine_symbol TEXT,
+    FOREIGN KEY (waypoint_symbol) REFERENCES waypoints(symbol)
 );
 
 -- -----------------------------
@@ -79,4 +85,41 @@ CREATE TABLE IF NOT EXISTS fleet_specs (
     crew_rotation TEXT,
     crew_morale REAL,
     quality INTEGER
+);
+
+-- -----------------------------
+-- Fleet Modules (nested list)
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS fleet_modules (
+    ship_symbol TEXT,
+    module_symbol TEXT,
+    module_name TEXT,
+    module_class TEXT,
+    module_type TEXT,
+    PRIMARY KEY (ship_symbol, module_symbol),
+    FOREIGN KEY (ship_symbol) REFERENCES fleet_specs(ship_symbol)
+);
+
+-- -----------------------------
+-- Fleet Mounts (nested list)
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS fleet_mounts (
+    ship_symbol TEXT,
+    mount_symbol TEXT,
+    mount_name TEXT,
+    mount_class TEXT,
+    mount_type TEXT,
+    PRIMARY KEY (ship_symbol, mount_symbol),
+    FOREIGN KEY (ship_symbol) REFERENCES fleet_specs(ship_symbol)
+);
+
+-- -----------------------------
+-- Fleet Cargo (nested object/list)
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS fleet_cargo (
+    ship_symbol TEXT,
+    units INTEGER,
+    capacity INTEGER,
+    PRIMARY KEY (ship_symbol),
+    FOREIGN KEY (ship_symbol) REFERENCES fleet_specs(ship_symbol)
 );
