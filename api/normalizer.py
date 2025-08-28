@@ -277,3 +277,53 @@ def normalize_shipyard_ships(conn: sqlite3.Connection, shipyard_json: dict):
         )
     except Exception as e:
         print(f"[ERROR] Failed to write shipyard_ships: {e}")
+
+
+def normalize_contracts(conn: sqlite3.Connection, contract_json: dict):
+    """
+    Columns: contract_id, type, deadline, payment_on_accept, payment_on_complete,
+    accepted, fulfilled, trade_symbol, destination_symbol, units_required, units_fulfilled
+    """
+    contract_data = contract_json.get("data", contract_json)
+
+    records = []
+
+    for ct in contract_data:
+        record = {
+            "contract_id": ct.get("id"),
+            "type": ct.get("type"),
+            "deadline": ct.get("terms", {}).get("deadline"),
+            "payment_on_accept": ct.get("terms", {})
+            .get("payment", {})
+            .get("onAccepted"),
+            "payment_on_complete": ct.get("terms", {})
+            .get("payment", {})
+            .get("onCompleted"),
+            "accepted": int(ct.get("accepted", False)),
+            "fulfilled": int(ct.get("fulfilled", False)),
+            "trade_symbol": ct.get("terms", {})
+            .get("deliver", [{}])[0]
+            .get("tradeSymbol"),
+            "destination_symbol": ct.get("terms", {})
+            .get("deliver", [{}])[0]
+            .get("destinationSymbol"),
+            "units_required": ct.get("terms", {})
+            .get("deliver", [{}])[0]
+            .get("unitsRequired"),
+            "units_fulfilled": ct.get("terms", {})
+            .get("deliver", [{}])[0]
+            .get("unitsFulfilled"),
+        }
+        records.append(record)
+
+    if not records:
+        print("[INFO] No contracts found.")
+        return
+
+    # Write to DB
+    try:
+        df = pd.DataFrame(records)
+        df.to_sql("contracts", conn, if_exists="append", index=False)
+        print(f"[INFO] Contracts updated:  ({len(df)} records)")
+    except Exception as e:
+        print(f"[ERROR] Failed to write contracts: {e}")
