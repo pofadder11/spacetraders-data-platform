@@ -1,5 +1,6 @@
 # run_startup.py
 import sqlite3
+import time
 
 from api.client import SpaceTradersClient
 from api.db.init_db import init_db
@@ -16,6 +17,15 @@ cur = conn.cursor()
 etl = SpaceTradersDataManager(client, conn)
 # etl.store_fleet()
 etl.store_contracts()
+time.sleep(5)
+etl.store_contracts()
+time.sleep(5)
+etl.store_contracts()
+time.sleep(5)
+etl.store_fleet()
+time.sleep(5)
+etl.store_fleet()
+time.sleep(5)
 
 
 # from config import DB_PATH
