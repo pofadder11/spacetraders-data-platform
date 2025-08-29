@@ -159,3 +159,15 @@ CREATE TABLE IF NOT EXISTS contracts (
     units_required INTEGER,
     units_fulfilled INTEGER
 );
+
+-- -----------------------------
+-- Routes
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS journeys (
+    ship_symbol TEXT PRIMARY KEY,
+    arrival_time TEXT,
+    dest_x TEXT,
+    dest_y TEXT,
+    ori_x TEXT,
+    ori_y TEXT,
+);

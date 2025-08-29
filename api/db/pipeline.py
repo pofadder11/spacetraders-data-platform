@@ -34,3 +34,8 @@ class SpaceTradersDataManager:
         shipyard_ships_json = self.client.list_shipyard_ships(shipyard_symbol)
         self.nmz.normalize_shipyard_ships(shipyard_ships_json)
         print("[INFO] Shipyard ships stored.")
+
+    def journey(self, ship_symbol: str, waypoint_symbol: str):
+        journeys_json = self.client.navigate_ship(ship_symbol, waypoint_symbol)
+        self.nmz.normalize_journey(journeys_json, ship_symbol)
+        print("[INFO] Ship journey stored.")

@@ -41,6 +41,9 @@ class AsyncFleetOps:
 
         status, fuel_current, fuel_capacity = row
 
+        if status == "IN_TRANSIT":
+            print("[DEBUG]: SHIP IS IN TRANSIT, finish this if")
+
         # Refuel if not at capacity
         if fuel_current < fuel_capacity:
             if status != "DOCKED":
@@ -94,6 +97,47 @@ class AsyncFleetOps:
         travel_seconds = (arr_dt - dep_dt).total_seconds()
         print(f"[INFO] Travel time: {travel_seconds:.1f} seconds")
         await self._sleep(travel_seconds + 1)
+
+    async def probe_markets(self, ship_symbol: str, market_waypoint: str):
+        """
+        Navigate to market waypoint if needed, then get marketplace data
+        """
+        # --- Get current waypoint ---
+        # Refresh fleet data
+        self.etl.fleet()
+
+        self.cur.execute(
+            """
+            SELECT waypointSymbol
+            FROM fleet_nav
+            WHERE ship_symbol = ?
+        """,
+            (ship_symbol,),
+        )
+        nav_row = self.cur.fetchone()
+        if not nav_row:
+            print(f"[WARN] No nav record found for {ship_symbol}")
+            return
+
+        current_wp = nav_row
+
+        # --- Navigate if not already at mining site ---
+        if current_wp != market_waypoint:
+            print(f"[INFO] {ship_symbol} navigating to {market_waypoint}...")
+            journey = self.etl.journey(ship_symbol, market_waypoint)
+            # Wait until arrival
+            arrival = journey["data"]["nav"]["arrival"]
+            print("DEBUG: Raw arrival :", arrival)
+            arrival_dt = datetime.fromisoformat(arrival.replace("Z", "+00:00"))
+            print("DEBUG: arrival :", arrival_dt)
+            now = datetime.now(timezone.utc)
+            wait_sec = max(0, (arrival_dt - now).total_seconds())
+            print("DEBUG: wait_sec :", wait_sec)
+            print(f"[INFO] {ship_symbol} en route, sleeping {wait_sec:.0f}s...")
+            await asyncio.sleep(wait_sec + 1)
+
+        self.client.get_market(market_waypoint)
+        self.etl.fleet()
 
     async def mine_until_full(self, ship_symbol: str, mine_site: str):
         """

@@ -1,20 +1,21 @@
-# run_startup.py
+"""# run_startup.py
 
 from api.client import SpaceTradersClient
-
+from api.db.pipeline import SpaceTradersDataManager
+import sqlite3
 client = SpaceTradersClient()
 # -----------------------------
 # Setup
 # -----------------------------
 
-"""
+
 # -----------------------------
 conn = sqlite3.connect("spacetraders.db")
 cur = conn.cursor()
 etl = SpaceTradersDataManager(client, conn)
 etl.fleet()
 
-"""
+
 
 # from config import DB_PATH
 
@@ -34,11 +35,13 @@ etl.fleet()
 
 # waypoints = client.list_waypoints(client.system_symbol)
 # print("Waypoints:", waypoints)
-# client.dock_ship("FLAT_SHIP-1")
-# client.refuel_ship("FLAT_SHIP-1")
-# client.orbit_ship("FLAT_SHIP-2")
-# client.navigate_ship("FLAT_SHIP-2", "X1-AP86-B6")
-client.get_market("X1-AP86-B6")
+client.dock_ship("FLAT_SHIP-4")
+client.refuel_ship("FLAT_SHIP-4")
+client.orbit_ship("FLAT_SHIP-4")
+etl.fleet()
+etl.journey("FLAT_SHIP-4", "X1-AP86-A1")
+etl.fleet()
+# client.get_market("X1-AP86-B6")
 # client.dock_ship("FLAT_SHIP-1")
 # client.negotiate_contract("FLAT_SHIP-1")
 # print("Ships:", client.list_ships())
@@ -46,13 +49,11 @@ client.get_market("X1-AP86-B6")
 
 
 # client.dock_ship("JANKNESS-1")
-"""
 print("Dock: ", client.dock_ship("JANKNESS-1"))
 print("Refuel: ", client.refuel_ship("JANKNESS-1"))
 print("Orbit: ", client.orbit_ship("JANKNESS-1"))
 nav_wayp = client.navigate_ship("JANKNESS-1", "X1-GN67-A2")
 print("Navigation result:", nav_wayp)
-"""
 # print("Shipyard ships", client.list_shipyard_ships("X1-GN67-A2"))
 # print("Shipyards :", client.list_shipyards())
 # conn = sqlite3.connect("spacetraders.db")
@@ -64,3 +65,5 @@ print("Navigation result:", nav_wayp)
 
 
 # print("Ships:", client.list_ships())
+
+"""

@@ -255,3 +255,28 @@ class Normalizer:
             records.append(record)
 
         self._write_to_db("contracts", records)
+
+    def normalize_journey(self, navigation_json: dict, ship_symbol: str):
+        navigation_data = self.extract_api_data(navigation_json)
+        records = []
+        for nv in navigation_data:
+            record = {
+                "ship_symbol": ship_symbol,
+                "arrival_time": nv.get("nav", {}).get("route", {}).get("arrival"),
+                "dest_x": nv.get("nav", {})
+                .get("route", {})
+                .get("destination", {})
+                .get("x"),
+                "dest_y": nv.get("nav", {})
+                .get("route", {})
+                .get("destination", {})
+                .get("y"),
+                "ori_x": nv.get("nav", {}).get("route", {}).get("origin", {}).get("x"),
+                "ori_y": nv.get("nav", {})
+                .get("route", {})
+                .get("destination", {})
+                .get("y"),
+            }
+            records.append(record)
+
+        self._write_to_db("journeys", records)

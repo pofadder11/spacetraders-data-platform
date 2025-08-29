@@ -49,13 +49,13 @@ class SpaceTradersClient:
             )
             if has_json_header and "json" not in kwargs and "data" not in kwargs:
                 kwargs["json"] = {}
-                print("[DEBUG] Injected empty JSON body {}")
+                # print("[DEBUG] Injected empty JSON body {}")
 
         try:
             url = f"{self.base_url}/{endpoint.lstrip('/')}"
             response = self.session.request(method, url, timeout=10, **kwargs)
             print(f"[DEBUG] Response status: {response.status_code}")
-            print(f"[DEBUG] Raw response text: {response.text}")
+            # print(f"[DEBUG] Raw response text: {response.text}")
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
