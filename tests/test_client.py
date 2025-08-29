@@ -6,27 +6,15 @@ client = SpaceTradersClient()
 # -----------------------------
 # Setup
 # -----------------------------
-"""
-conn = init_db("spacetraders.db")
 
+"""
 # -----------------------------
 conn = sqlite3.connect("spacetraders.db")
 cur = conn.cursor()
 etl = SpaceTradersDataManager(client, conn)
-# etl.store_fleet()
-etl.store_contracts()
-time.sleep(5)
-etl.store_contracts()
-time.sleep(5)
-etl.store_contracts()
-time.sleep(5)
-etl.store_fleet()
-time.sleep(5)
-etl.store_fleet()
-time.sleep(5)
+etl.fleet()
 
 """
-
 
 # from config import DB_PATH
 
@@ -48,10 +36,11 @@ time.sleep(5)
 # print("Waypoints:", waypoints)
 # client.dock_ship("FLAT_SHIP-1")
 # client.refuel_ship("FLAT_SHIP-1")
-# client.orbit_ship("FLAT_SHIP-1")
-# client.navigate_ship("FLAT_SHIP-1", "X1-AP86-BC5D")
-client.dock_ship("FLAT_SHIP-1")
-client.negotiate_contract("FLAT_SHIP-1")
+# client.orbit_ship("FLAT_SHIP-2")
+# client.navigate_ship("FLAT_SHIP-2", "X1-AP86-B6")
+client.get_market("X1-AP86-B6")
+# client.dock_ship("FLAT_SHIP-1")
+# client.negotiate_contract("FLAT_SHIP-1")
 # print("Ships:", client.list_ships())
 # normalize_fleet(sqlite3.connect("spacetraders.db"), client.list_ships())
 

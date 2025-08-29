@@ -1,0 +1,25 @@
+{
+    "data": {
+        "symbol": "X1-AP86-B6",
+        "exports": [],
+        "imports": [],
+        "exchange": [
+            {
+                "symbol": "FUEL",
+                "name": "Fuel",
+                "description": "High-energy fuel used in spacecraft propulsion systems to enable long-distance space travel."
+            }
+        ],
+        "transactions": [],
+        "tradeGoods": [
+            {
+                "symbol": "FUEL",
+                "type": "EXCHANGE",
+                "tradeVolume": 180,
+                "supply": "MODERATE",
+                "purchasePrice": 72,
+                "sellPrice": 68
+            }
+        ]
+    }
+}

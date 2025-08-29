@@ -130,3 +130,14 @@ class SpaceTradersClient:
 
     def extract(self, ship_symbol: str) -> Dict[str, Any]:
         return self._request("POST", f"my/ships/{ship_symbol}/extract")
+
+    def get_market(
+        self, waypoint_symbol: str, system_symbol: Optional[str] = None
+    ) -> Dict[str, Any]:
+        system_symbol = system_symbol or self.system_symbol
+        if not system_symbol:
+            raise ValueError("System symbol not set. Call get_my_agent first.")
+        return self._request(
+            "GET",
+            f"systems/{system_symbol}/waypoints/{waypoint_symbol}/market",
+        )
