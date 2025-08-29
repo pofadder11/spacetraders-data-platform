@@ -313,7 +313,7 @@ def normalize_contracts(conn: sqlite3.Connection, contract_json: dict):
             .get("onAccepted"),
             "payment_on_complete": ct.get("terms", {})
             .get("payment", {})
-            .get("onCompleted"),
+            .get("onFulfilled"),
             "accepted": int(ct.get("accepted", False)),
             "fulfilled": int(ct.get("fulfilled", False)),
             "trade_symbol": ct.get("terms", {})

@@ -1,8 +1,3 @@
-"""
-This needs to be incorporated into data logging in order to reduce
-code clutter and duplication in orchestration/run_startup.py
-"""
-
 import sqlite3
 
 from api.client import SpaceTradersClient

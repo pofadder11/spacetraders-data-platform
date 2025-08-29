@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS fleet_cargo (
 -- Contracts
 -- -----------------------------
 CREATE TABLE IF NOT EXISTS contracts (
-    PRIMARY KEY (contract_id),
+    contract_id TEXT PRIMARY KEY,
     type TEXT,
     deadline TEXT,
     payment_on_accept INTEGER,
