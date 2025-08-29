@@ -20,6 +20,8 @@ etl = SpaceTradersDataManager(client, conn)
 etl.waypoints()
 etl.shipyards()
 etl.fleet()
+etl.contracts()
+""""""
 
 
 # -----------------------------

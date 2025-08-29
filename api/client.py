@@ -127,3 +127,6 @@ class SpaceTradersClient:
 
     def negotiate_contract(self, ship_symbol: str) -> Dict[str, Any]:
         return self._request("POST", f"my/ships/{ship_symbol}/negotiate/contract")
+
+    def extract(self, ship_symbol: str) -> Dict[str, Any]:
+        return self._request("POST", f"my/ships/{ship_symbol}/extract")

@@ -46,8 +46,13 @@ time.sleep(5)
 
 # waypoints = client.list_waypoints(client.system_symbol)
 # print("Waypoints:", waypoints)
-
-print("Ships:", client.list_ships())
+# client.dock_ship("FLAT_SHIP-1")
+# client.refuel_ship("FLAT_SHIP-1")
+# client.orbit_ship("FLAT_SHIP-1")
+# client.navigate_ship("FLAT_SHIP-1", "X1-AP86-BC5D")
+client.dock_ship("FLAT_SHIP-1")
+client.negotiate_contract("FLAT_SHIP-1")
+# print("Ships:", client.list_ships())
 # normalize_fleet(sqlite3.connect("spacetraders.db"), client.list_ships())
 
 
