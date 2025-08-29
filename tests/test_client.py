@@ -1,16 +1,14 @@
 # run_startup.py
-import sqlite3
-import time
 
 from api.client import SpaceTradersClient
-from api.db.init_db import init_db
-from api.db.pipeline import SpaceTradersDataManager
 
+client = SpaceTradersClient()
 # -----------------------------
 # Setup
 # -----------------------------
+"""
 conn = init_db("spacetraders.db")
-client = SpaceTradersClient()
+
 # -----------------------------
 conn = sqlite3.connect("spacetraders.db")
 cur = conn.cursor()
@@ -26,6 +24,8 @@ etl.store_fleet()
 time.sleep(5)
 etl.store_fleet()
 time.sleep(5)
+
+"""
 
 
 # from config import DB_PATH
@@ -47,7 +47,7 @@ time.sleep(5)
 # waypoints = client.list_waypoints(client.system_symbol)
 # print("Waypoints:", waypoints)
 
-# print("Ships:", client.list_ships())
+print("Ships:", client.list_ships())
 # normalize_fleet(sqlite3.connect("spacetraders.db"), client.list_ships())
 
 
