@@ -55,7 +55,7 @@ class SpaceTradersClient:
             url = f"{self.base_url}/{endpoint.lstrip('/')}"
             response = self.session.request(method, url, timeout=10, **kwargs)
             print(f"[DEBUG] Response status: {response.status_code}")
-            # print(f"[DEBUG] Raw response text: {response.text}")
+            print(f"[DEBUG] Raw response text: {response.text}")
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -82,6 +82,9 @@ class SpaceTradersClient:
         if not system_symbol:
             raise ValueError("System symbol not set. Call get_my_agent first.")
         return self._request("GET", f"systems/{system_symbol}/waypoints")
+
+    def supply_chain(self) -> Dict[str, Any]:
+        return self._request("GET", "/market/supply-chain")
 
     def list_contracts(self) -> Dict[str, Any]:
         return self._request("GET", "my/contracts")

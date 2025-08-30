@@ -12,6 +12,12 @@ async def main():
     conn = sqlite3.connect("spacetraders.db")
     etl = SpaceTradersDataManager(client, conn)
     ops = AsyncFleetOps(client, conn, etl)
+    """
+    etl.waypoints()
+    etl.shipyards()
+    etl.fleet()
+    etl.contracts()
+    """
 
     # Setup DB row factory
     conn.row_factory = sqlite3.Row
@@ -30,7 +36,7 @@ async def main():
     print("Market waypoints: ", market_waypoints)
 
     # get sattelite
-    cur.execute("SELECT ship_symbol FROM fleet_specs WHERE frame_name is 'Probe'")
+    cur.execute("SELECT ship_symbol FROM fleet_specs WHERE frame_name is 'Frigate'")
     satellite = cur.fetchone()["ship_symbol"]
     print("Sattelite :", satellite)
 
@@ -41,9 +47,11 @@ async def main():
 
     # Run miners concurrently
     tasks = []
-    # for ship in ships:
-    # print(f"[INFO] Sending {ship} to {mine_site} for mining...")
-    # tasks.append(asyncio.create_task(ops.mine_until_full(ship, mine_site)))
+    """
+    for ship in ships:
+        print(f"[INFO] Sending {ship} to {mine_site} for mining...")
+        tasks.append(asyncio.create_task(ops.mine_until_full(ship, mine_site)))
+        """
 
     for market_waypoint in market_waypoints:
         tasks.append(asyncio.create_task(ops.probe_markets(satellite, market_waypoint)))
