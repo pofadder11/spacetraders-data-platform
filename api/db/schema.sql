@@ -4,7 +4,9 @@
 CREATE TABLE IF NOT EXISTS waypoints (
     symbol TEXT PRIMARY KEY,
     system_symbol TEXT NOT NULL,
-    type TEXT NOT NULL
+    type TEXT NOT NULL,
+    x INTEGER,
+    y INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS traits (
@@ -170,4 +172,17 @@ CREATE TABLE IF NOT EXISTS journeys (
     dest_y TEXT,
     ori_x TEXT,
     ori_y TEXT,
+);
+
+-- -----------------------------
+-- Tradegoods
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS tradegoods (
+    waypoint_symbol TEXT PRIMARY KEY,
+    trade_symbol TEXT,
+    purchase_price INTEGER,
+    sell_price INTEGER,
+    trade_volume TEXT,
+    supply TEXT,
+    activity TEXT,
 );

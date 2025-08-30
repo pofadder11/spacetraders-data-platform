@@ -39,3 +39,9 @@ class SpaceTradersDataManager:
         journeys_json = self.client.navigate_ship(ship_symbol, waypoint_symbol)
         self.nmz.normalize_journey(journeys_json, ship_symbol)
         print("[INFO] Ship journey stored.")
+
+    def market_prices(self, waypoint_symbol):
+        tradegoods_json = self.client.get_market(waypoint_symbol)
+        print("[DEBUG]: tradegoods in pipeline")
+        self.nmz.normalize_market(tradegoods_json)
+        print("[INFO]: Tradegood data stored")

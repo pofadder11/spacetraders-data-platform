@@ -54,14 +54,14 @@ class Normalizer:
 
             # --- Write main table ---
             df.to_sql(table_name, self.conn, if_exists="replace", index=False)
-            print(f"[INFO] {table_name} updated with {len(df)} records.")
+            # print(f"[INFO] {table_name} updated with {len(df)} records.")
 
             # --- Write append-only log table ---
             df_log = df.copy()
             df_log["timestamp"] = datetime.utcnow().isoformat()
             log_table = f"{table_name}_log"
             df_log.to_sql(log_table, self.conn, if_exists="append", index=False)
-            print(f"[INFO] {log_table} appended with {len(df_log)} records.")
+            # print(f"[INFO] {log_table} appended with {len(df_log)} records.")
 
         except Exception as e:
             print(f"[ERROR] Failed to write {table_name}: {e}")
@@ -173,6 +173,8 @@ class Normalizer:
                     "symbol": wp.get("symbol"),
                     "system_symbol": wp.get("systemSymbol"),
                     "type": wp.get("type"),
+                    "x": wp.get("x"),
+                    "y": wp.get("y"),
                 }
             )
             for trait in wp.get("traits", []):
@@ -280,3 +282,44 @@ class Normalizer:
             records.append(record)
 
         self._write_to_db("journeys", records)
+
+    def normalize_market(self, market_json: dict):
+        print("[DEBUG]: started nmz")
+        market_data_list = self.extract_api_data(market_json)
+        print("[DEBUG]: normalize market_json initiated")
+
+        if not market_data_list:
+            print("[WARNING]: no data extracted from market_json")
+            return
+
+        market_data = market_data_list[0]  # unpack first dict
+
+        waypoint = market_data.get("symbol")
+        tradegoods = market_data.get("tradeGoods", [])
+        print("[DEBUG]: got tradegoods list")
+
+        records = []
+        for tg in tradegoods:
+            record = {
+                "waypoint_symbol": waypoint,
+                "trade_symbol": tg.get("symbol"),
+                "purchase_price": tg.get("purchasePrice"),
+                "sell_price": tg.get("sellPrice"),
+                "trade_volume": tg.get("tradeVolume"),
+                "supply": tg.get("supply"),
+                "activity": tg.get("type"),
+            }
+            records.append(record)
+            print(f"[DEBUG]: appended tradegood {tg.get('symbol')}")
+
+        self._write_to_db("tradegoods", records)
+        print("[DEBUG]: tradegoods write_to_db done")
+
+        """def normalize_nav_status(self, ship_symbol: str, nav_status_json: dict):
+            nav_status = self.extract_api_data(nav_status_json)
+            
+            conn.execute(
+                "UPDATE fleet_nav SET status = ? WHERE ship_symbol = ?",
+                (new_status, ship_symbol)
+            )
+            conn.commit()"""

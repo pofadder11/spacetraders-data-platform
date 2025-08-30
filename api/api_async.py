@@ -23,26 +23,59 @@ class AsyncFleetOps:
         """Async sleep wrapper."""
         await asyncio.sleep(seconds)
 
+    """
+    # hacky test. remove and integrate client side if this works
+    async def update_ship_status(conn, ship_symbol: str, new_status: str):
+        conn.execute(
+            "UPDATE fleet_nav SET status = ? WHERE ship_symbol = ?",
+            (new_status, ship_symbol)
+        )
+    conn.commit()"""
+
     async def prepare_ship_for_navigation(self, ship_symbol: str):
+        print("[debug]: Start Nav Prep")
         """Dock, refuel, and orbit ship before navigation."""
         self.etl.fleet()
+
         self.cur.execute(
             """
-            SELECT fn.status, fs.fuel_current, fs.fuel_capacity
-            FROM fleet_nav fn
-            JOIN fleet_specs fs ON fn.ship_symbol = fs.ship_symbol
-            WHERE fn.ship_symbol = ?
-            """,
+        SELECT 
+            fn.status,
+            fs.fuel_current,
+            fs.fuel_capacity
+        FROM fleet_nav fn
+        JOIN fleet_specs fs ON fn.ship_symbol = fs.ship_symbol
+        WHERE fn.ship_symbol = ?
+        """,
             (ship_symbol,),
         )
         row = self.cur.fetchone()
         if not row:
             raise RuntimeError(f"No fleet_nav entry for ship {ship_symbol}")
-
         status, fuel_current, fuel_capacity = row
 
+        print("[DEBUG]: db call for status etc.", status)
+
         if status == "IN_TRANSIT":
-            print("[DEBUG]: SHIP IS IN TRANSIT, finish this if")
+            self.cur.execute(
+                """
+            SELECT arrival_time
+            FROM journeys_log
+            WHERE ship_symbol = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """,
+                (ship_symbol,),
+            )
+            arrival_time = self.cur.fetchone()[0]
+            print("DEBUG: Raw arrival :", arrival_time)
+            arrival_dt = datetime.fromisoformat(arrival_time.replace("Z", "+00:00"))
+            print("DEBUG: arrival :", arrival_dt)
+            now = datetime.now(timezone.utc)
+            wait_sec = max(0, (arrival_dt - now).total_seconds())
+            print("DEBUG: wait_sec :", wait_sec)
+            print(f"[INFO] {ship_symbol} en route, sleeping {wait_sec:.0f}s...")
+            await asyncio.sleep(wait_sec + 1)
 
         # Refuel if not at capacity
         if fuel_current < fuel_capacity:
@@ -61,6 +94,7 @@ class AsyncFleetOps:
             self.client.orbit_ship(ship_symbol)
             await self._sleep(2)
             self.etl.fleet()
+        print("INFO: Nav prep done, preparing to fly!")
 
     async def nav(self, ship_symbol: str, waypoint_symbol: str):
         """Navigate ship unless already at target waypoint."""
@@ -85,58 +119,41 @@ class AsyncFleetOps:
             return
 
         print(f"[DEBUG] Navigating {ship_symbol} to {waypoint_symbol}")
-        self.etl.fleet()
-        await self.prepare_ship_for_navigation(ship_symbol)
-        nav_resp = self.client.navigate_ship(ship_symbol, waypoint_symbol)
-        self.etl.fleet()
 
-        # Parse travel times
-        route = nav_resp["data"]["nav"]["route"]
-        dep_dt = datetime.fromisoformat(route["departureTime"].replace("Z", "+00:00"))
-        arr_dt = datetime.fromisoformat(route["arrival"].replace("Z", "+00:00"))
-        travel_seconds = (arr_dt - dep_dt).total_seconds()
-        print(f"[INFO] Travel time: {travel_seconds:.1f} seconds")
-        await self._sleep(travel_seconds + 1)
+        await self.prepare_ship_for_navigation(ship_symbol)
+        self.etl.journey(ship_symbol, waypoint_symbol)
+        # parse arrival time
+        self.cur.execute(
+            """
+            SELECT arrival_time
+            FROM journeys_log
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+        )
+        arrival = self.cur.fetchone()[0]
+
+        # Wait until arrival
+        arrival_dt = datetime.fromisoformat(arrival.replace("Z", "+00:00"))
+        print("DEBUG: arrival :", arrival_dt)
+        now = datetime.now(timezone.utc)
+        wait_sec = max(0, (arrival_dt - now).total_seconds())
+        print("DEBUG: wait_sec :", wait_sec)
+        print(f"[INFO] {ship_symbol} en route, sleeping {wait_sec:.0f}s...")
+        await asyncio.sleep(wait_sec + 5)
 
     async def probe_markets(self, ship_symbol: str, market_waypoint: str):
         """
         Navigate to market waypoint if needed, then get marketplace data
         """
         # --- Get current waypoint ---
-        # Refresh fleet data
-        self.etl.fleet()
-
-        self.cur.execute(
-            """
-            SELECT waypointSymbol
-            FROM fleet_nav
-            WHERE ship_symbol = ?
-        """,
-            (ship_symbol,),
-        )
-        nav_row = self.cur.fetchone()
-        if not nav_row:
-            print(f"[WARN] No nav record found for {ship_symbol}")
-            return
-
-        current_wp = nav_row
-
-        # --- Navigate if not already at mining site ---
-        if current_wp != market_waypoint:
-            print(f"[INFO] {ship_symbol} navigating to {market_waypoint}...")
-            journey = self.etl.journey(ship_symbol, market_waypoint)
-            # Wait until arrival
-            arrival = journey["data"]["nav"]["arrival"]
-            print("DEBUG: Raw arrival :", arrival)
-            arrival_dt = datetime.fromisoformat(arrival.replace("Z", "+00:00"))
-            print("DEBUG: arrival :", arrival_dt)
-            now = datetime.now(timezone.utc)
-            wait_sec = max(0, (arrival_dt - now).total_seconds())
-            print("DEBUG: wait_sec :", wait_sec)
-            print(f"[INFO] {ship_symbol} en route, sleeping {wait_sec:.0f}s...")
-            await asyncio.sleep(wait_sec + 1)
-
-        self.client.get_market(market_waypoint)
+        print("[INFO]: starting probe_markets")
+        await self.nav(ship_symbol, market_waypoint)
+        print("[INFO]: probe_markets arrived, docking")
+        self.client.dock_ship(ship_symbol)
+        print("[INFO]: probe_markets docked, starting ETL")
+        self.etl.market_prices(market_waypoint)
+        print("[INFO]: probe_markets complete")
         self.etl.fleet()
 
     async def mine_until_full(self, ship_symbol: str, mine_site: str):
@@ -228,3 +245,43 @@ class AsyncFleetOps:
                     f"[INFO] {ship_symbol} cargo full ({cargo_units}/{cargo_capacity})"
                 )
                 break
+
+    async def mine_sell_repeat(self, ship_symbol: str, mine_site: str):
+        # 1. Mine until cargo is full
+        print("[DEBUG]: ")
+        await self.mine_until_full(ship_symbol, mine_site)
+
+        # 2. Find the best market
+        self.cur.execute(
+            """
+            SELECT tg.waypoint_symbol,
+                GROUP_CONCAT(tg.trade_symbol) AS sellable_goods,
+                SUM(fci.units * tg.sell_price) AS total_value
+            FROM tradegoods_log tg
+            JOIN fleet_cargo_inventory fci
+            ON tg.trade_symbol = fci.symbol
+            WHERE fci.ship_symbol = ?
+            AND tg.sell_price IS NOT NULL
+            GROUP BY tg.waypoint_symbol
+            ORDER BY total_value DESC
+            LIMIT 1;
+            """,
+            (ship_symbol,),
+        )
+        row = self.cur.fetchone()
+        if not row:
+            print(f"[WARNING] No markets found for ship {ship_symbol}")
+            return
+
+        market, goods_str, _ = row
+        goods = goods_str.split(",")
+
+        # 3. Navigate to that market
+        await self.nav(ship_symbol, market)
+
+        # 4. Sell all relevant goods
+        for g in goods:
+            self.client.sell_cargo(ship_symbol, g)
+
+        # 5. Repeat cycle
+        await self.mine_sell_repeat(ship_symbol, mine_site)
