@@ -1,0 +1,33 @@
+{
+    "data": [
+        {
+            "id": "cmev8s769kmuwui73p5jqyy66",
+            "factionSymbol": "AEGIS",
+            "type": "PROCUREMENT",
+            "terms": {
+                "deadline": "2025-09-04T10:09:26.859Z",
+                "payment": {
+                    "onAccepted": 2142,
+                    "onFulfilled": 12852
+                },
+                "deliver": [
+                    {
+                        "tradeSymbol": "COPPER_ORE",
+                        "destinationSymbol": "X1-AP86-H61",
+                        "unitsRequired": 72,
+                        "unitsFulfilled": 0
+                    }
+                ]
+            },
+            "accepted": false,
+            "fulfilled": false,
+            "expiration": "2025-08-29T10:09:26.859Z",
+            "deadlineToAccept": "2025-08-29T10:09:26.859Z"
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "page": 1,
+        "limit": 10
+    }
+}

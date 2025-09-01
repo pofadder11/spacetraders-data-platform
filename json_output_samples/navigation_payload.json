@@ -1,0 +1,37 @@
+{
+    "data": {
+        "nav": {
+            "systemSymbol": "X1-AP86",
+            "waypointSymbol": "X1-AP86-B8",
+            "route": {
+                "destination": {
+                    "symbol": "X1-AP86-B8",
+                    "type": "ASTEROID",
+                    "systemSymbol": "X1-AP86",
+                    "x": -302,
+                    "y": 141
+                },
+                "origin": {
+                    "symbol": "X1-AP86-B6",
+                    "type": "FUEL_STATION",
+                    "systemSymbol": "X1-AP86",
+                    "x": -157,
+                    "y": -109
+                },
+                "departureTime": "2025-08-29T17:54:42.494Z",
+                "arrival": "2025-08-29T18:08:20.494Z"
+            },
+            "status": "IN_TRANSIT",
+            "flightMode": "CRUISE"
+        },
+        "fuel": {
+            "current": 0,
+            "capacity": 0,
+            "consumed": {
+                "amount": 0,
+                "timestamp": "2025-08-29T17:54:42.497Z"
+            }
+        },
+        "events": []
+    }
+}

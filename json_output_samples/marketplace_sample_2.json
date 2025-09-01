@@ -1,0 +1,45 @@
+{
+    "data": {
+        "symbol": "X1-AP86-A1",
+        "exports": [],
+        "imports": [
+            {
+                "symbol": "FOOD",
+                "name": "Galactic Cuisine",
+                "description": "A diverse range of foods from different planets, including fresh produce, meats, and prepared meals."
+            },
+            {
+                "symbol": "MEDICINE",
+                "name": "Medicine",
+                "description": "Medical products, including drugs, treatments, and medical equipment."
+            },
+            {
+                "symbol": "CLOTHING",
+                "name": "Clothing",
+                "description": "A wide range of clothing and fashion items, including garments, accessories, and textiles."
+            },
+            {
+                "symbol": "EQUIPMENT",
+                "name": "Equipment",
+                "description": "Tools and equipment used in various industries and applications."
+            },
+            {
+                "symbol": "JEWELRY",
+                "name": "Jewelry",
+                "description": "Exquisite and valuable pieces of jewelry made from rare materials and precious gems."
+            },
+            {
+                "symbol": "ANTIMATTER",
+                "name": "Antimatter",
+                "description": "A highly valuable and dangerous substance used for advanced propulsion and weapons systems."
+            }
+        ],
+        "exchange": [
+            {
+                "symbol": "FUEL",
+                "name": "Fuel",
+                "description": "High-energy fuel used in spacecraft propulsion systems to enable long-distance space travel."
+            }
+        ]
+    }
+}

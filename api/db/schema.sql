@@ -4,7 +4,9 @@
 CREATE TABLE IF NOT EXISTS waypoints (
     symbol TEXT PRIMARY KEY,
     system_symbol TEXT NOT NULL,
-    type TEXT NOT NULL
+    type TEXT NOT NULL,
+    x INTEGER,
+    y INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS traits (
@@ -141,4 +143,46 @@ CREATE TABLE IF NOT EXISTS fleet_cargo (
     capacity INTEGER,
     PRIMARY KEY (ship_symbol),
     FOREIGN KEY (ship_symbol) REFERENCES fleet_specs(ship_symbol)
+);
+
+-- -----------------------------
+-- Contracts
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS contracts (
+    contract_id TEXT PRIMARY KEY,
+    type TEXT,
+    deadline TEXT,
+    payment_on_accept INTEGER,
+    payment_on_complete INTEGER,
+    accepted INTEGER,
+    fulfilled INTEGER,
+    trade_symbol TEXT,
+    destination_symbol TEXT,
+    units_required INTEGER,
+    units_fulfilled INTEGER
+);
+
+-- -----------------------------
+-- Routes
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS journeys (
+    ship_symbol TEXT PRIMARY KEY,
+    arrival_time TEXT,
+    dest_x TEXT,
+    dest_y TEXT,
+    ori_x TEXT,
+    ori_y TEXT,
+);
+
+-- -----------------------------
+-- Tradegoods
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS tradegoods (
+    waypoint_symbol TEXT PRIMARY KEY,
+    trade_symbol TEXT,
+    purchase_price INTEGER,
+    sell_price INTEGER,
+    trade_volume TEXT,
+    supply TEXT,
+    activity TEXT,
 );

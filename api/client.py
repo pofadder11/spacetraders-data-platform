@@ -49,7 +49,7 @@ class SpaceTradersClient:
             )
             if has_json_header and "json" not in kwargs and "data" not in kwargs:
                 kwargs["json"] = {}
-                print("[DEBUG] Injected empty JSON body {}")
+                # print("[DEBUG] Injected empty JSON body {}")
 
         try:
             url = f"{self.base_url}/{endpoint.lstrip('/')}"
@@ -82,6 +82,9 @@ class SpaceTradersClient:
         if not system_symbol:
             raise ValueError("System symbol not set. Call get_my_agent first.")
         return self._request("GET", f"systems/{system_symbol}/waypoints")
+
+    def supply_chain(self) -> Dict[str, Any]:
+        return self._request("GET", "/market/supply-chain")
 
     def list_contracts(self) -> Dict[str, Any]:
         return self._request("GET", "my/contracts")
@@ -127,3 +130,28 @@ class SpaceTradersClient:
 
     def negotiate_contract(self, ship_symbol: str) -> Dict[str, Any]:
         return self._request("POST", f"my/ships/{ship_symbol}/negotiate/contract")
+
+    def extract(self, ship_symbol: str) -> Dict[str, Any]:
+        return self._request("POST", f"my/ships/{ship_symbol}/extract")
+
+    def get_market(
+        self, waypoint_symbol: str, system_symbol: Optional[str] = None
+    ) -> Dict[str, Any]:
+        system_symbol = system_symbol or self.system_symbol
+        return self._request(
+            "GET",
+            f"systems/{system_symbol}/waypoints/{waypoint_symbol}/market",
+        )
+
+    def sell_cargo(self, ship_symbol: str) -> Dict[str, Any]:
+        return self._request("POST", f"my/ships/{ship_symbol}/sell")
+
+    def jettison(self, ship_symbol: str, symbol: str, units: int) -> Dict[str, Any]:
+        return self._request(
+            "POST",
+            f"my/ships/{ship_symbol}/jettison",
+            json={"symbol": symbol, "units": units},
+        )
+
+    def nav_status(self, ship_symbol: str) -> Dict[str, Any]:
+        return self._request("GET", f"my/ships/{ship_symbol}/nav")
