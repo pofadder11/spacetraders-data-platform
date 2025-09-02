@@ -21,6 +21,32 @@ def pretty(obj):
         data = obj
     rprint(Pretty(data))
 
+def ingest_system_and_waypoints(systems_api, system_symbol: str, session: Session) -> None:
+        try:
+            sys_resp = systems_api.get_system(system_symbol)
+            wps_resp = systems_api.get_system_waypoints(system_symbol)
+        except ApiException as e:      
+            print(f"[ingest] API error: {e}")
+        raise
+
+sys_data = sys_resp.data  # expected fields: symbol, type, x, y
+session.merge(System(
+    symbol=sys_data.symbol,
+    type=getattr(sys_data, "type", None),
+    x=sys_data.x,
+    y=sys_data.y,
+))
+
+for w in wps_resp.data:  # expected fields: symbol, type, x, y
+    session.merge(Waypoint(
+        symbol=w.symbol,
+        system_symbol=system_symbol,
+        type=getattr(w, "type", None),
+        x=w.x,
+        y=w.y,
+    ))
+
+session.commit()
 
 configuration = openapi_client.Configuration(access_token=os.getenv("BEARER_TOKEN"))
 apicl = openapi_client.ApiClient(configuration)
@@ -55,7 +81,7 @@ marketplace_waypoints = [
     for w in waypoints_list.data
     if any(t.name == "Marketplace" for t in w.traits)
 ]
-
+"""
 print("Waypoints with Marketplace trait: ")
 pretty(marketplace_waypoints)
 
@@ -73,5 +99,6 @@ async def main():
 
 # Run the async loop
 asyncio.run(main())
+"""
 
 
