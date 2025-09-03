@@ -53,3 +53,56 @@ class FleetNav(Base):
     route_arrival_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class MarketTradeGoodSnapshot(Base):
+    __tablename__ = "market_trade_goods"
+
+    # Composite primary key: waypoint + trade symbol + observed_at
+    waypoint_symbol: Mapped[str] = mapped_column(String(100), primary_key=True, index=True)
+    trade_symbol: Mapped[str] = mapped_column(String(100), primary_key=True, index=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, index=True)
+
+    # MarketTradeGood fields
+    type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    trade_volume: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    supply: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    activity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    purchase_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sell_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class MarketTradeGoodCurrent(Base):
+    __tablename__ = "market_trade_goods_current"
+
+    waypoint_symbol: Mapped[str] = mapped_column(String(100), primary_key=True, index=True)
+    trade_symbol: Mapped[str] = mapped_column(String(100), primary_key=True, index=True)
+
+    # latest observed timestamp used to determine freshness
+    observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    trade_volume: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    supply: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    activity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    purchase_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sell_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class ShipCurrent(Base):
+    __tablename__ = "ships_current"
+
+    ship_symbol: Mapped[str] = mapped_column(String(100), primary_key=True)
+
+    role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    nav_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    flight_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    system_symbol: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    waypoint_symbol: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+
+    fuel_current: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fuel_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cargo_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
