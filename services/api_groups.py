@@ -1,8 +1,7 @@
-from __future__ import annotations
-
+from session import SessionLocal
 from typing import Any
-
 from services.client_service import OpenAPIService
+from services.write_through import WriteThrough, default_handlers
 
 
 class APIProxy:
@@ -34,5 +33,5 @@ api = APIProxy(svc)
 # Raw (non-data-proxy) access is still available if needed
 raw = svc.apis
 
-# Expose the full data-proxy namespace for convenience in helper functions
-etl = svc.d
+# Write-through ETL helper
+etl = WriteThrough(svc, SessionLocal, handlers=default_handlers())
