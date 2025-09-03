@@ -1,7 +1,20 @@
-from session import SessionLocal
-from typing import Any
+"""Convenience API namespaces for the SpaceTraders client.
+
+This module exposes grouped accessors for the generated OpenAPI client.  The
+``svc`` object provides the raw client, while the top-level variables like
+``systems`` and ``fleet`` are *data-proxy* shortcuts that automatically return
+``.data`` from responses.  In addition, the ``etl`` namespace wraps those
+proxies with write-through handlers so that calling, for example,
+``etl.fleet.get_my_ships()`` will normalize and persist the response to the
+database.
+"""
+
+from __future__ import annotations
+
 from services.client_service import OpenAPIService
 from services.write_through import WriteThrough, default_handlers
+from session import SessionLocal
+from typing import Any
 
 
 class APIProxy:
@@ -25,13 +38,7 @@ class APIProxy:
                 return getattr(group, name)
         raise AttributeError(f"{name!r} not found in any API group")
 
-
-# Create one shared service and a proxy for convenient access
-svc = OpenAPIService()
-api = APIProxy(svc)
-
-# Raw (non-data-proxy) access is still available if needed
-raw = svc.apis
-
-# Write-through ETL helper
 etl = WriteThrough(svc, SessionLocal, handlers=default_handlers())
+
+# If you also want raw (non-data-proxy) access:
+raw = svc.apis
