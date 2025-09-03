@@ -1,23 +1,36 @@
-# services/api.py
-from __future__ import annotations
-
 from session import SessionLocal
+from typing import Any
 from services.client_service import OpenAPIService
 from services.write_through import WriteThrough, default_handlers
 
-# Create one shared service. If you prefer lazy init, wrap this in a function.
+
+class APIProxy:
+    """Proxy that delegates attribute lookups across all API groups.
+
+    This allows calling endpoints directly, e.g. ``api.get_my_agent()``
+    instead of ``api.agents.get_my_agent()``.
+    """
+
+    def __init__(self, service: OpenAPIService) -> None:
+        self._service = service
+
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover - simple delegation
+        d = self._service.d
+        # Allow access to group namespaces directly (api.systems, api.agents, ...)
+        if hasattr(d, name):
+            return getattr(d, name)
+        # Search each API group for the requested attribute
+        for group in vars(d).values():
+            if hasattr(group, name):
+                return getattr(group, name)
+        raise AttributeError(f"{name!r} not found in any API group")
+
+
+# Create one shared service and a proxy for convenient access
 svc = OpenAPIService()
+api = APIProxy(svc)
 
-# “Data-proxy” shortcuts: method calls return `.data` automatically.
-systems = svc.d.systems
-agents = svc.d.agents
-fleet = svc.d.fleet
-contracts = svc.d.contracts
-factions = svc.d.factions
-data_api = svc.d.data  # named 'data_api' to avoid name clash with 'data'
-global_api = svc.d.global_api  # GlobalApi → global_api alias
-
-# If you also want raw (non-data-proxy) access:
+# Raw (non-data-proxy) access is still available if needed
 raw = svc.apis
 
 # Write-through ETL helper
