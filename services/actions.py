@@ -45,5 +45,21 @@ def refuel_ship(
     return api.fleet.refuel_ship(ship_symbol)
 
 
-__all__ = ["navigate_ship", "sell_cargo", "refuel_ship"]
+def list_ships(api: Any = api_groups.etl):
+    """Return the player's ships and persist via write-through handlers."""
+    return api.fleet.get_my_ships()
+
+
+def orbit(ship_symbol: str, api: Any = api_groups.etl):
+    """Put a ship into orbit and persist nav via write-through handlers."""
+    return api.fleet.orbit_ship(ship_symbol)
+
+
+__all__ = [
+    "navigate_ship",
+    "sell_cargo",
+    "refuel_ship",
+    "list_ships",
+    "orbit",
+]
 

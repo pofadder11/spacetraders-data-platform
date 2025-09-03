@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from services.client_service import OpenAPIService
 from services.write_through import WriteThrough, default_handlers
+from services.state_sync import state_handlers
 from session import SessionLocal
 from typing import Any
 
@@ -38,7 +39,16 @@ class APIProxy:
                 return getattr(group, name)
         raise AttributeError(f"{name!r} not found in any API group")
 
-etl = WriteThrough(svc, SessionLocal, handlers=default_handlers())
+# Instantiate the client service once; it lazily loads .env in its ctor
+svc = OpenAPIService()
 
-# If you also want raw (non-data-proxy) access:
+# Unified data-proxy accessor across API groups (e.g., api.get_my_agent())
+api = APIProxy(svc)
+
+# Write-through wrapper (returns .data and persists via handlers)
+_handlers = default_handlers()
+_handlers.update(state_handlers())
+etl = WriteThrough(svc, SessionLocal, handlers=_handlers)
+
+# Raw (non-data-proxy) access to the generated APIs
 raw = svc.apis
