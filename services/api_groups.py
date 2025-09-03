@@ -17,3 +17,6 @@ global_api = svc.d.global_api  # GlobalApi → global_api alias
 
 # If you also want raw (non-data-proxy) access:
 raw = svc.apis
+
+# Expose the full data-proxy namespace for convenience in helper functions
+etl = svc.d
