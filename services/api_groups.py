@@ -1,7 +1,9 @@
 # services/api.py
 from __future__ import annotations
 
+from session import SessionLocal
 from services.client_service import OpenAPIService
+from services.write_through import WriteThrough, default_handlers
 
 # Create one shared service. If you prefer lazy init, wrap this in a function.
 svc = OpenAPIService()
@@ -17,3 +19,6 @@ global_api = svc.d.global_api  # GlobalApi → global_api alias
 
 # If you also want raw (non-data-proxy) access:
 raw = svc.apis
+
+# Write-through ETL helper
+etl = WriteThrough(svc, SessionLocal, handlers=default_handlers())
