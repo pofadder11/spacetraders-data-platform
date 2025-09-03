@@ -33,3 +33,6 @@ api = APIProxy(svc)
 
 # Raw (non-data-proxy) access is still available if needed
 raw = svc.apis
+
+# Expose the full data-proxy namespace for convenience in helper functions
+etl = svc.d
