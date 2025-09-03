@@ -1,31 +1,19 @@
-# runner snippet
-from rich import print as rprint
-from rich.pretty import Pretty
+# main_test.py (usage sketch)
+from dotenv import load_dotenv
+from session import init_db, SessionLocal
+from services.client_service import OpenAPIService
+from services.write_through import WriteThrough, default_handlers
 
-from services.api_groups import systems, agents, fleet
+def main():
+    load_dotenv()
+    init_db()
 
-def pretty(obj):
-    """
-    Recursively pretty-print any object with color.
-    Works with Pydantic/OpenAPI models, dicts, lists, etc.
-    """
-    # Convert Pydantic/OpenAPI model to dict if possible
-    try:
-        data = obj.dict(by_alias=True, exclude_none=True)
-    except AttributeError:
-        data = obj
-    rprint(Pretty(data))
+    svc = OpenAPIService()
+    wt = WriteThrough(svc, SessionLocal, handlers=default_handlers())
 
-me = agents.get_my_agent()  # directly returns the inner `.data`
-hq = me.headquarters
-pretty(hq)
-system_symbol = "-".join(hq.split("-")[:2])
+    # Call returns the inner `.data`, and auto-updates fleet_nav
+    ships = wt.fleet.get_my_ships()
+    print(f"Ships fetched: {len(ships)}")
 
-sys_obj = systems.get_system(system_symbol)           # returns data
-wps = systems.get_system_waypoints(system_symbol)
-     # returns list-like data
-
-ships = fleet.get_my_ships()                          # returns data
-pretty(ships)
-print(ships)
-pretty(wps)
+if __name__ == "__main__":
+    main()

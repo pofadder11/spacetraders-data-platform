@@ -1,4 +1,5 @@
-from sqlalchemy import String, Integer, ForeignKey
+from datetime import datetime
+from sqlalchemy import String, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -31,3 +32,24 @@ class Waypoint(Base):
     y: Mapped[int] = mapped_column(Integer)
 
     system = relationship("System", back_populates="waypoints")
+
+class FleetNav(Base):
+    __tablename__ = "fleet_nav"
+
+    ship_symbol: Mapped[str] = mapped_column(String(100), primary_key=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    flight_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    # Current location from nav
+    system_symbol: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    waypoint_symbol: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+
+    # Route details (if in transit)
+    route_departure_system: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    route_departure_waypoint: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    route_destination_system: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    route_destination_waypoint: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    route_departure_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    route_arrival_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
