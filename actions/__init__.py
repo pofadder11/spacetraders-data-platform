@@ -16,18 +16,15 @@ def list_ships(svc: OpenAPIService):
 
     return svc.d.fleet.get_my_ships()
 
-
 def orbit(svc: OpenAPIService, ship_symbol: str):
     """Move ``ship_symbol`` into orbit."""
 
     return svc.d.fleet.orbit_ship(ship_symbol)
 
-
 def dock(svc: OpenAPIService, ship_symbol: str):
     """Dock ``ship_symbol`` at its current waypoint."""
 
     return svc.d.fleet.dock_ship(ship_symbol)
-
 
 def navigate(svc: OpenAPIService, ship_symbol: str, destination: str):
     """Navigate ``ship_symbol`` to ``destination`` waypoint."""
