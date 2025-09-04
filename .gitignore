@@ -20,9 +20,13 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+spacetraders_data_platform.egg-info
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -37,17 +41,20 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+.nox/
 .coverage
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
 *,cover
+*.py.cover
 .hypothesis/
 venv/
 .venv/
 .python-version
 .pytest_cache
+cover/
 
 # Translations
 *.mo
@@ -55,12 +62,30 @@ venv/
 
 # Django stuff:
 *.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
 
 # Sphinx documentation
 docs/_build/
 
 # PyBuilder
+.pybuilder/
 target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# other files
+spacetraders.db
+fix_json_folder.py
+cache.db
+spacetraders.db-journal
+architecture.txt
