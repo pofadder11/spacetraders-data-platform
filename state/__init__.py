@@ -93,6 +93,24 @@ def update_from_nav(ship_symbol: str, nav: Any | None, fuel: Any | None = None) 
     return st
 
 
+def update_from_cargo(ship_symbol: str, cargo: Any | None) -> ShipState:
+    """Update cached cargo units from a ShipCargo payload."""
+    cur = _SHIPS.get(ship_symbol)
+    if cur is None:
+        cur = ShipState(symbol=ship_symbol, updated_at=datetime.utcnow())
+    units = getattr(cargo, "units", None) if cargo is not None else cur.cargo_units
+    st = ShipState(
+        symbol=ship_symbol,
+        nav_status=cur.nav_status,
+        system_symbol=cur.system_symbol,
+        waypoint_symbol=cur.waypoint_symbol,
+        cargo_units=units,
+        updated_at=datetime.utcnow(),
+    )
+    _SHIPS[ship_symbol] = st
+    return st
+
+
 def get_ship(symbol: str) -> ShipState | None:
     """Return cached state for ``symbol`` if available."""
 

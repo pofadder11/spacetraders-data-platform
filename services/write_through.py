@@ -22,6 +22,9 @@ from services.normalizer import (
     upsert_system_row as _upsert_system_row,
     upsert_waypoints_from_list as _upsert_waypoints_from_list,
     upsert_fleet_nav_from_ship as _upsert_fleet_nav_from_ship,
+    update_ship_current_cargo_units as _update_ship_current_cargo_units,
+    upsert_ship_cargo_current as _upsert_ship_cargo_current,
+    insert_extraction_yield as _insert_extraction_yield,
 )
 
 # Write-through relies on your dedicated normalizer
@@ -66,6 +69,44 @@ def default_handlers() -> Dict[str, Handler]:
         if ship is not None:
             _upsert_ships_current(session, [ship])
             _upsert_fleet_nav_from_ship(session, ship)
+
+    def handle_extract_resources(session: Session, data: Any, args, kwargs, api_name, method_name) -> None:
+        ship_symbol = args[0] if args else kwargs.get("ship_symbol") or kwargs.get("shipSymbol")
+        extraction = getattr(data, "extraction", None)
+        cooldown = getattr(data, "cooldown", None)
+        cargo = getattr(data, "cargo", None)
+        if extraction is not None:
+            ex_yield = getattr(extraction, "var_yield", None)
+            if ex_yield is not None:
+                _insert_extraction_yield(
+                    session,
+                    ship_symbol,
+                    getattr(ex_yield, "symbol", None),
+                    getattr(ex_yield, "units", None) or 0,
+                    cooldown,
+                )
+        if cargo is not None:
+            _update_ship_current_cargo_units(session, ship_symbol, getattr(cargo, "units", None))
+            _upsert_ship_cargo_current(session, ship_symbol, cargo)
+
+    def handle_siphon_resources(session: Session, data: Any, args, kwargs, api_name, method_name) -> None:
+        ship_symbol = args[0] if args else kwargs.get("ship_symbol") or kwargs.get("shipSymbol")
+        siphon = getattr(data, "siphon", None)
+        cooldown = getattr(data, "cooldown", None)
+        cargo = getattr(data, "cargo", None)
+        if siphon is not None:
+            sy = getattr(siphon, "var_yield", None)
+            if sy is not None:
+                _insert_extraction_yield(
+                    session,
+                    ship_symbol,
+                    getattr(sy, "symbol", None),
+                    getattr(sy, "units", None) or 0,
+                    cooldown,
+                )
+        if cargo is not None:
+            _update_ship_current_cargo_units(session, ship_symbol, getattr(cargo, "units", None))
+            _upsert_ship_cargo_current(session, ship_symbol, cargo)
 
     def handle_get_system(session: Session, system: Any, *ctx) -> None:
         if system is not None:
@@ -118,6 +159,11 @@ def default_handlers() -> Dict[str, Handler]:
         "SystemsApi.get_system": handle_get_system,
         "systems.get_system_waypoints": handle_get_system_waypoints,
         "SystemsApi.get_system_waypoints": handle_get_system_waypoints,
+        # resource gathering
+        "fleet.extract_resources": handle_extract_resources,
+        "FleetApi.extract_resources": handle_extract_resources,
+        "fleet.siphon_resources": handle_siphon_resources,
+        "FleetApi.siphon_resources": handle_siphon_resources,
     }
 
 

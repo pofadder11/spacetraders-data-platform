@@ -64,5 +64,17 @@ def state_handlers() -> Dict[str, Handler]:
         # fuel changes
         "fleet.refuel_ship": handle_refuel,
         "FleetApi.refuel_ship": handle_refuel,
+        # resource gathering updates cargo units
+        "fleet.extract_resources": lambda _s, data, args, kwargs, *_: (
+            state.update_from_cargo(_ship_symbol_from(args, kwargs), getattr(data, "cargo", None))
+        ),
+        "FleetApi.extract_resources": lambda _s, data, args, kwargs, *_: (
+            state.update_from_cargo(_ship_symbol_from(args, kwargs), getattr(data, "cargo", None))
+        ),
+        "fleet.siphon_resources": lambda _s, data, args, kwargs, *_: (
+            state.update_from_cargo(_ship_symbol_from(args, kwargs), getattr(data, "cargo", None))
+        ),
+        "FleetApi.siphon_resources": lambda _s, data, args, kwargs, *_: (
+            state.update_from_cargo(_ship_symbol_from(args, kwargs), getattr(data, "cargo", None))
+        ),
     }
-

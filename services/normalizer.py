@@ -12,7 +12,10 @@ from models import (
     ShipCurrent,
     Waypoint,
     System as DbSystem,
+    ExtractionYield as DbExtractionYield,
+    ShipCargoCurrent,
 )
+from sqlalchemy import delete
 
 
 def _enum_str(x):
@@ -258,6 +261,66 @@ def upsert_ship_current_from_nav(session: Session, ship_symbol: str, nav) -> Non
     Update ShipCurrent row from ShipNav only (dock/orbit/get_ship_nav responses).
     """
     upsert_ship_current_from_nav_fuel(session, ship_symbol, nav=nav, fuel=None)
+
+
+# -------------------------
+# Cargo and Yield from extraction/siphon
+# -------------------------
+def update_ship_current_cargo_units(session: Session, ship_symbol: str, units: int | None) -> None:
+    existing = session.get(ShipCurrent, ship_symbol)
+    row = existing or ShipCurrent(ship_symbol=ship_symbol, updated_at=datetime.now(timezone.utc))
+    row.cargo_units = units
+    row.updated_at = datetime.now(timezone.utc)
+    session.merge(row)
+    session.commit()
+
+
+def upsert_ship_cargo_current(session: Session, ship_symbol: str, cargo) -> int:
+    """Replace the current inventory for a ship based on ShipCargo."""
+    # wipe existing rows for the ship, then insert fresh snapshot
+    session.execute(delete(ShipCargoCurrent).where(ShipCargoCurrent.ship_symbol == ship_symbol))
+    count = 0
+    inventory = getattr(cargo, "inventory", None) or []
+    now = datetime.now(timezone.utc)
+    for item in inventory:
+        session.merge(
+            ShipCargoCurrent(
+                ship_symbol=ship_symbol,
+                trade_symbol=getattr(item, "symbol", None),
+                units=getattr(item, "units", 0) or 0,
+                updated_at=now,
+            )
+        )
+        count += 1
+    session.commit()
+    return count
+
+
+def _current_waypoint_for_ship(session: Session, ship_symbol: str) -> str | None:
+    nav = session.get(FleetNav, ship_symbol)
+    return getattr(nav, "waypoint_symbol", None) if nav is not None else None
+
+
+def insert_extraction_yield(
+    session: Session,
+    ship_symbol: str,
+    trade_symbol: str,
+    units: int,
+    cooldown,
+) -> None:
+    wp = _current_waypoint_for_ship(session, ship_symbol)
+    row = DbExtractionYield(
+        ship_symbol=ship_symbol,
+        waypoint_symbol=wp,
+        trade_symbol=trade_symbol,
+        units=units,
+        cooldown_total_seconds=getattr(cooldown, "total_seconds", None),
+        cooldown_remaining_seconds=getattr(cooldown, "remaining_seconds", None),
+        cooldown_expiration=getattr(cooldown, "expiration", None),
+        observed_at=datetime.now(timezone.utc),
+    )
+    session.add(row)
+    session.commit()
 
 
 # -------------------------
