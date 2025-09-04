@@ -1,0 +1,7 @@
+
+
+    API client      -->>   JSON    -->>     Normalizer       -->>              ETL Manager (Class)
+
+[wrappers for API                       [flattens dicts and             [Wraps each API call+ normalizing
+endpoints       ]                        writes from keys to db]         + db write to a single line for
+                                                                            orchestration/runners       ]

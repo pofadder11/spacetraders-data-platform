@@ -1,2 +1,23 @@
 {
+    "chat.tools.autoApprove": true,
+    // (B) Also auto-approve terminal commands in agent mode
+    //     (you can fine-tune this map; true = auto, false = always prompt)
+    "chat.tools.terminal.autoApprove": {
+        "rm": true,
+        "rmdir": true,
+        "del": true,
+        "kill": true,
+        "curl": true,
+        "wget": true,
+        "npm": true,
+        "pnpm": true,
+        "yarn": true,
+        "python": true,
+        "pip": true,
+        "go": true,
+        "cargo": true,
+        "node": true,
+        "/^Remove-Item\\b/i": true
+    },
+    "chat.editing.autoAcceptDelay": 1,
 }
