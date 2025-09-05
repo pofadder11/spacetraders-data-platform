@@ -1,0 +1,33 @@
+async def frigate_loop(client: openapi_client.ApiClient, frigate_symbol: str, asteroid_wp: str) -> None:
+    fleet = openapi_client.FleetApi(client)
+    while True:
+        # Scan waypoints periodically to populate DB (once per cycle if cooldown allows)
+        try:
+            # Check for Sensor Array mount before scanning
+            ship = (await api_call(fleet.get_my_ship, frigate_symbol)).data
+            mounts = getattr(ship, "mounts", []) or []
+            has_sensor = any("SENSOR_ARRAY" in str(getattr(m, "symbol", "")).upper() for m in mounts)
+            if not has_sensor:
+                await rs.log("scan.skipped_no_sensor", ship=frigate_symbol)
+            else:
+                resp = await api_call(fleet.create_ship_waypoint_scan, frigate_symbol)
+                waypoints = getattr(resp, "waypoints", None)
+                cooldown = getattr(resp, "cooldown", None)
+                if waypoints:
+                    async with session_scope() as s:
+                        await wt.upsert_waypoints(s, waypoints)
+                await rs.log("scan.waypoints", ship=frigate_symbol, count=len(waypoints or []))
+                await wait_cooldown(cooldown)
+        except openapi_client.exceptions.ApiException as e:
+            await rs.log("scan.error", ship=frigate_symbol, error=str(e), body=getattr(e, "body", None))
+    await navigate_and_wait(fleet, frigate_symbol, asteroid_wp)
+    await ensure_orbit(fleet, frigate_symbol)
+    await refine_what_you_can(client, frigate_symbol)
+    ship = (await api_call(fleet.get_my_ship, frigate_symbol)).data
+    cargo = getattr(getattr(ship, "cargo", None), "units", 0) or 0
+    capacity = getattr(getattr(ship, "cargo", None), "capacity", 0) or 0
+    if capacity and cargo > max(10, int(0.9 * capacity)):
+        await sell_all_high_value(client, frigate_symbol)
+    await asyncio.sleep(1.0)
+
+

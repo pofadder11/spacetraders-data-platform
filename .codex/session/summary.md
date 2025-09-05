@@ -1,27 +1,42 @@
 # Session Summary
 
-- Context: File-based memory scaffolded at `.codex/`. `runner.py` has an undefined var in the orbit loop (`ship` vs `s`) and issues top-level API calls on import. `services/actions.py` provides sync wrappers and async helpers (`prepare_ship_for_navigation_async`, `navigate_with_prep_async`).
-- Decisions: Persist session context in `.codex/`; assistant will auto-check `summary.md` and recent history at session start. Keep runner minimal; place strategies/orchestration outside.
+- Context: Starting fresh after generating the OpenAPI client. Goal is a clean async PostgreSQL write-through architecture with domain models, adapters, caching, and orchestration.
+- Decisions: 
+  - Use async SQLModel + asyncpg with Alembic migrations. 
+  - Separate layers: generated DTOs → adapters → Pydantic domain models (immutable) → ORM models.
+  - Split DB into reference vs telemetry schemas. 
+  - Centralize writes via `DbWriter` queue. 
+  - Use cache + TTL in `DataService`. 
+  - Store config in `.env` and `config/settings.py`.
 - TODOs:
-  - Fix `runner.py` orbit loop variable; update state via `state.update_from_ships(ships)`.
-  - Gate/remove top-level debug prints; move to a callable or `if __name__ == "__main__"` block.
-  - Add call visualisation and documentation updates to the codebase. [DONE]
-  - Docs/diagrams skeleton: MkDocs (Material), pyreverse + pydeps diagrams, VizTracer quickstart, import-linter contracts, and a GitHub Action to build docs and enforce boundaries.
-  - Optional: log key actions via `services.memory.append_history()` during runs.
-- Assumptions: `.env` token present; SQLite at `spacetraders.db`; network access available; Windows PowerShell environment.
+  - [ ] Create repo layout with `adapters/`, `domain/`, `db/`, `services/`, `runners/`, `tests/`.
+  - [ ] Add `pyproject.toml` with dependencies (`sqlmodel`, `asyncpg`, `alembic`, `pydantic`, etc.).
+  - [ ] Add `.env.example` and `config/settings.py` loader.
+  - [ ] Implement `db/session.py` with async engine + session factory.
+  - [ ] Implement `db/models.py` with reference (systems, waypoints) and telemetry (ships, markets, contracts).
+  - [ ] Init Alembic, wire `env.py` to async engine, create and run first migration.
+  - [ ] Implement `domain/` models (`ShipState`, `MarketState`, etc.) as immutable Pydantic objects.
+  - [ ] Implement `adapters/` mappers (DTO → domain).
+  - [ ] Implement `db/repositories.py` with idempotent upserts.
+  - [ ] Implement `db/queue.py` with `DbWriter` async queue + background writer.
+  - [ ] Implement `services/data_service.py` with cache + TTL + write-through.
+  - [ ] Add `services/fleet_service.py` and `services/market_service.py` for orchestration logic.
+  - [ ] Implement `runners/fleet_loop.py` and `runners/poll_markets.py` for end-to-end tests.
+  - [ ] Ensure generated OpenAPI client is async-capable; wrap in client factory.
+  - [ ] Add `tests/` for adapters, repositories, and services.
+  - [ ] Add linting/formatting (ruff/black) and optional GitHub Actions CI for tests + Alembic.
+- Assumptions: PostgreSQL available at `postgresql+asyncpg://st_dev:st_dev@localhost:5432/spacetraders_dev`; `.env` provides DB URL + API token; VS Code Codex extension runs commands in repo.
 
 ## Docs/Visualisation Plan
 
-- MkDocs (Material): generate a site from docstrings and `docs/`; add quickstart and publish via CI.
-- Diagrams: auto class/package graphs via `pyreverse` and `pydeps` (scripts + Make/PS module).
-- Runtime call tree: VizTracer how-to for one-command tracing; store artifacts under `display/`.
-- Architecture contracts: `import-linter` with initial rules (warn-only, then tighten).
-- CI: GitHub Action to build docs, generate diagrams, and fail on import rule breaks.
+- MkDocs (Material): optional later for developer docs, quickstart, and diagrams.
+- Diagrams: possible `pyreverse` + `pydeps` integration under `display/`.
+- Runtime tracing: VizTracer optional for call tree debugging.
+- CI: GitHub Action for migrations/tests, lint/format, and optional docs build.
 
 Implemented in this session:
-- Added `mkdocs.yml`, `docs/index.md`, and `docs/development/docs-and-diagrams.md`.
-- Added `display/generate_diagrams.py` with `pyreverse` and `pydeps` outputs to `display/diagrams/`.
-- Added `requirements-docs.txt` with toolchain deps.
-- Added `.importlinter` contracts and CI workflow `.github/workflows/docs-and-architecture.yml`.
+- Defined clean project structure and directory layout.
+- Drafted full to-do list covering DB, services, adapters, and runners.
+- Provided sample code snippets for each component (DbWriter, DataService, adapters, etc.).
 
-Next session default: read `.codex/session/summary.md` and tail recent `.codex/history/<session>.jsonl` (session from `CODEX_SESSION_ID` or `session-YYYYMMDD`).
+Next session default: auto-read `.codex/session/summary.md` and tail `.codex/history/<session>.jsonl` to bootstrap context before coding tasks.
