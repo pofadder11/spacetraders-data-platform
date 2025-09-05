@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 import inspect
 from typing import Any, Callable, Dict
+import time
+import threading
+import json
 
 import openapi_client
 import openapi_client.api as api_pkg
@@ -25,15 +28,48 @@ class _DataApiProxy:
     `result.data` when available, otherwise returns `result` unchanged.
     """
 
-    def __init__(self, api_instance: Any) -> None:
+    def __init__(self, api_instance: Any, service: "OpenAPIService") -> None:
         self._api = api_instance
+        self._svc = service
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._api, name)
         if callable(attr):
             def _call(*args, **kwargs):
-                res = attr(*args, **kwargs)
-                return getattr(res, "data", res)
+                # Token-bucket throttle and 429-aware retry
+                attempts = 0
+                while True:
+                    attempts += 1
+                    self._svc._throttle()
+                    try:
+                        res = attr(*args, **kwargs)
+                        return getattr(res, "data", res)
+                    except Exception as e:  # openapi_client.exceptions.ApiException
+                        # Try to read headers/status/body
+                        status = getattr(e, "status", None) or getattr(getattr(e, "response", None), "status", None)
+                        headers = getattr(e, "headers", None) or getattr(getattr(e, "response", None), "headers", None) or {}
+                        body = getattr(e, "body", None)
+                        retry_after = None
+                        if isinstance(headers, dict):
+                            ra = headers.get("Retry-After")
+                            try:
+                                if ra is not None:
+                                    retry_after = float(ra)
+                            except Exception:
+                                retry_after = None
+                        if retry_after is None and body:
+                            try:
+                                data = json.loads(body)
+                                retry_after = float(data.get("error", {}).get("data", {}).get("retryAfter", 0)) or None
+                            except Exception:
+                                retry_after = None
+                        if status == 429 or retry_after is not None:
+                            # backoff and retry a few times
+                            self._svc._throttle(retry_after or 0.7)
+                            if attempts < 5:
+                                continue
+                        # Not rate-limit or retries exhausted
+                        raise
             _call.__name__ = getattr(attr, "__name__", name)
             _call.__doc__ = getattr(attr, "__doc__", None)
             return _call
@@ -85,6 +121,12 @@ class OpenAPIService:
             configure(cfg)
 
         self._client = openapi_client.ApiClient(cfg)
+        # Simple thread-safe token bucket for rate limiting
+        self._rate_capacity = float(os.getenv("API_RATE_BURST", 30))
+        self._rate_per_sec = float(os.getenv("API_RATE_PER_SEC", 2))
+        self._tokens = self._rate_capacity
+        self._last_refill = time.monotonic()
+        self._rate_lock = threading.Lock()
         self._apis: Dict[str, Any] = {}
         self._data_apis: Dict[str, Any] = {}
         self._bind_all_apis()
@@ -92,6 +134,30 @@ class OpenAPIService:
         # Namespaces for convenient access
         self.apis = _Namespace(self._apis)
         self.d = _Namespace(self._data_apis)  # data-proxy namespace
+
+    def _throttle(self, extra_sleep: float | None = None) -> None:
+        """Block to respect a burst/steady rate. Optionally sleep extra (Retry-After)."""
+        if extra_sleep and extra_sleep > 0:
+            time.sleep(extra_sleep)
+        with self._rate_lock:
+            now = time.monotonic()
+            # Refill tokens
+            elapsed = now - self._last_refill
+            if elapsed > 0:
+                self._tokens = min(self._rate_capacity, self._tokens + elapsed * self._rate_per_sec)
+                self._last_refill = now
+            if self._tokens >= 1.0:
+                self._tokens -= 1.0
+                return
+            # Need to wait for next token
+            needed = 1.0 - self._tokens
+            wait = max(0.0, needed / self._rate_per_sec)
+        # release lock while sleeping
+        if wait > 0:
+            time.sleep(wait)
+        with self._rate_lock:
+            # consume token after sleep
+            self._tokens = max(0.0, self._tokens - 1.0)
 
     def _bind_all_apis(self) -> None:
         for attr in dir(api_pkg):
@@ -102,7 +168,7 @@ class OpenAPIService:
                 continue
 
             instance = obj(self._client)
-            data_proxy = _DataApiProxy(instance)
+            data_proxy = _DataApiProxy(instance, self)
 
             # Expose CamelCase
             setattr(self, attr, instance)

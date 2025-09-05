@@ -1,0 +1,29 @@
+[importlinter]
+root_package = 
+
+[contract: generated_client_is_one_way]
+name = OpenAPI client does not import app code
+type = forbidden
+source_modules = 
+    openapi_client
+forbidden_modules = 
+    services
+    state
+
+[contract: display_is_leaf]
+name = display does not affect core logic
+type = forbidden
+source_modules = 
+    display
+forbidden_modules = 
+    services
+    state
+
+[contract: orchestration_does_not_leak]
+name = orchestration tests do not leak into services
+type = forbidden
+source_modules = 
+    orchestration_test_OLD
+forbidden_modules = 
+    services
+

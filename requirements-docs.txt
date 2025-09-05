@@ -1,0 +1,9 @@
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+mkdocstrings>=0.25.0
+mkdocstrings-python>=1.10.5
+viztracer>=0.16.3
+import-linter>=2.0
+pylint>=3.2.0  # for pyreverse
+pydeps>=1.12.20
+

@@ -88,3 +88,11 @@ fix_json_folder.py
 cache.db
 spacetraders.db-journal
 architecture.txt
+# Codex CLI session memory (persisted context)
+.codex/history/
+# Optional cache/logs under .codex
+.codex/cache/
+
+# Generated visual outputs
+display/diagrams/
+display/trace.json

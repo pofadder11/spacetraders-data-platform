@@ -1,0 +1,64 @@
+
+digraph G {
+    concentrate = true;
+
+    rankdir = TB;
+    node [style=filled,fillcolor="#ffffff",fontcolor="#000000",fontname=Helvetica,fontsize=10];
+
+    dotenv [fillcolor="#b65353",fontcolor="#ffffff"];
+    models [fillcolor="#b8a63d"];
+    openapi_client [fillcolor="blue",fontcolor="white",shape="box"];
+    openapi_client_api [fillcolor="blue",fontcolor="white",label="openapi_client\.\napi",shape="box"];
+    openapi_client_models [fillcolor="blue",fontcolor="white",label="openapi_client\.\nmodels",shape="box"];
+    openapi_client_models_navigate_ship_request [fillcolor="#65ce3b",label="openapi_client\.\nmodels\.\nnavigate_ship_request"];
+    openapi_client_models_refuel_ship_request [fillcolor="#65ce3b",label="openapi_client\.\nmodels\.\nrefuel_ship_request"];
+    openapi_client_models_sell_cargo_request [fillcolor="blue",fontcolor="white",label="openapi_client\.\nmodels\.\nsell_cargo_request",shape="box"];
+    services_actions [fillcolor="#3a8866",fontcolor="#ffffff",label="services\.\nactions"];
+    services_api_groups [fillcolor="#35a173",fontcolor="#ffffff",label="services\.\napi_groups"];
+    services_client_service [fillcolor="#2fbc7f",label="services\.\nclient_service"];
+    services_normalizer [fillcolor="#38a878",label="services\.\nnormalizer"];
+    services_state_sync [fillcolor="#3ab07e",label="services\.\nstate_sync"];
+    services_write_through [fillcolor="#28a36f",fontcolor="#ffffff",label="services\.\nwrite_through"];
+    session [fillcolor="#467ca4",fontcolor="#ffffff"];
+    sqlalchemy [fillcolor="#4b06f9",fontcolor="#ffffff"];
+    sqlalchemy_orm [fillcolor="#4b0ce9",fontcolor="#ffffff",label="sqlalchemy.orm"];
+    sqlalchemy_orm_Session [fillcolor="#603db8",fontcolor="#ffffff",label="sqlalchemy\.\norm\.\nSession"];
+    state [fillcolor="#b653a8",fontcolor="#ffffff"];
+    dotenv -> services_client_service [fillcolor="#b65353",minlen="2"];
+    models -> services_normalizer [fillcolor="#b8a63d",minlen="2"];
+    models -> session [fillcolor="#b8a63d"];
+    openapi_client -> services_actions [fillcolor="blue",minlen="2"];
+    openapi_client -> services_client_service [fillcolor="blue",minlen="2"];
+    openapi_client_api -> openapi_client [fillcolor="blue"];
+    openapi_client_api -> services_client_service [fillcolor="blue",minlen="2"];
+    openapi_client_models -> openapi_client [fillcolor="blue"];
+    openapi_client_models -> services_actions [fillcolor="blue",minlen="2"];
+    openapi_client_models_navigate_ship_request -> openapi_client [fillcolor="#65ce3b",minlen="2"];
+    openapi_client_models_navigate_ship_request -> openapi_client_models [fillcolor="#65ce3b",weight="2"];
+    openapi_client_models_navigate_ship_request -> services_actions [fillcolor="#65ce3b",minlen="3"];
+    openapi_client_models_refuel_ship_request -> openapi_client [fillcolor="#65ce3b",minlen="2"];
+    openapi_client_models_refuel_ship_request -> openapi_client_models [fillcolor="#65ce3b",weight="2"];
+    openapi_client_models_refuel_ship_request -> services_actions [fillcolor="#65ce3b",minlen="3"];
+    openapi_client_models_sell_cargo_request -> openapi_client [fillcolor="blue",minlen="2"];
+    openapi_client_models_sell_cargo_request -> openapi_client_models [fillcolor="blue",weight="2"];
+    openapi_client_models_sell_cargo_request -> services_actions [fillcolor="blue",minlen="3"];
+    services_api_groups -> services_actions [fillcolor="#35a173"];
+    services_client_service -> services_api_groups [fillcolor="#2fbc7f"];
+    services_client_service -> services_write_through [fillcolor="#2fbc7f"];
+    services_normalizer -> services_write_through [fillcolor="#38a878"];
+    services_state_sync -> services_api_groups [fillcolor="#3ab07e"];
+    services_write_through -> services_api_groups [fillcolor="#28a36f"];
+    services_write_through -> services_state_sync [fillcolor="#28a36f"];
+    session -> services_api_groups [fillcolor="#467ca4",minlen="2"];
+    sqlalchemy -> models [fillcolor="#4b06f9"];
+    sqlalchemy -> services_normalizer [fillcolor="#4b06f9",minlen="2"];
+    sqlalchemy -> services_write_through [fillcolor="#4b06f9",minlen="2"];
+    sqlalchemy -> session [fillcolor="#4b06f9"];
+    sqlalchemy_orm -> models [fillcolor="#4b0ce9",minlen="2"];
+    sqlalchemy_orm -> services_normalizer [fillcolor="#4b0ce9",minlen="2"];
+    sqlalchemy_orm -> services_write_through [fillcolor="#4b0ce9",minlen="2"];
+    sqlalchemy_orm -> session [fillcolor="#4b0ce9",minlen="2"];
+    sqlalchemy_orm_Session -> services_normalizer [fillcolor="#603db8",minlen="3"];
+    sqlalchemy_orm_Session -> services_write_through [fillcolor="#603db8",minlen="3"];
+    state -> services_state_sync [fillcolor="#b653a8",minlen="2"];
+}

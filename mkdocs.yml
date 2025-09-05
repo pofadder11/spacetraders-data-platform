@@ -1,0 +1,36 @@
+site_name: SpaceTraders Data Platform
+site_description: Developer docs, API reference, and architecture diagrams
+repo_url: https://github.com/your-org/spacetraders-data-platform
+docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_if_no_docstring: false
+            inherited_members: true
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - tables
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.snippets
+nav:
+  - Home: index.md
+  - Developer Guide:
+      - Docs & Diagrams: development/docs-and-diagrams.md
+  - API (OpenAPI Models):
+      - Overview: README_OpenAPI_Endpoints.md
+      # The rest of the auto-generated docs/ pages will be picked up automatically in the sidebar
+
