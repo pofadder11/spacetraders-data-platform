@@ -96,13 +96,130 @@ def print_specs(s: ShipsSpecs) -> None:
     print(f"- {s.symbol}: role={s.role}, frame={s.frame_name}, engine={s.engine_name}, speed={s.speed}")
     print(f"  mounts={s.mounts} modules={s.modules} capacity={s.capacity}")
 
+# --- pull + persist system waypoints based on agent HQ (robust) --------------
+import sqlite3
+from db.auto_repo_sqlite import TableSpec, upsert_many
+from openapi_client.api.systems_api import SystemsApi
+from openapi_client.api.agents_api import AgentsApi
+from adapters.waypoint_adapter import adapt_waypoints
+
+async def load_waypoints_from_agent(conn: sqlite3.Connection, client) -> None:
+    """
+    Fetch agent HQ, derive system symbol, then fetch all system waypoints (with pagination)
+    and upsert them into the 'waypoints' table.
+    """
+    agents_api = AgentsApi(client)
+    systems_api = SystemsApi(client)
+
+    # 1) get_my_agent (sync or async)
+    try:
+        agent_resp = await maybe_await(agents_api, "get_my_agent")
+        agent = unwrap_data(agent_resp)
+        print("[WAYPOINTS] get_my_agent OK")
+    except Exception as e:
+        print(f"[WAYPOINTS][ERROR] get_my_agent failed: {e!r}")
+        return
+
+    # 2) derive system from agent.headquarters (e.g., X1-Q51-A1 -> X1-Q51)
+    hq_wp = getattr(agent, "headquarters", None)
+    if not hq_wp or not isinstance(hq_wp, str) or "-" not in hq_wp:
+        print(f"[WAYPOINTS][WARN] Unexpected headquarters value: {hq_wp!r}")
+        return
+    parts = hq_wp.split("-")
+    if len(parts) < 2:
+        print(f"[WAYPOINTS][WARN] Cannot derive system from HQ: {hq_wp!r}")
+        return
+    system_symbol = "-".join(parts[:2])
+    print(f"[WAYPOINTS] Agent HQ={hq_wp}, derived system={system_symbol}")
+
+        # 3) fetch all pages of system waypoints (page+limit only; no per_page)
+    all_dtos = []
+    page = 1
+    limit = 20  # adjust if you want more per page
+    while True:
+        try:
+            # Most OpenAPI Python clients use (system_symbol, page=?, limit=?)
+            wps_resp = await maybe_await(
+                systems_api,
+                "get_system_waypoints",
+                system_symbol=system_symbol,
+                page=page,
+                limit=limit,
+            )
+            wps_data = unwrap_data(wps_resp)
+        except TypeError:
+            # Some clients don't expose page/limit at all -> single page
+            wps_resp = await maybe_await(
+                systems_api,
+                "get_system_waypoints",
+                system_symbol=system_symbol,
+            )
+            wps_data = unwrap_data(wps_resp)
+
+        # Normalize to a list:
+        # - some SDKs return a plain list
+        # - others return a wrapper with .data / .waypoints
+        if wps_data is None:
+            break
+        if isinstance(wps_data, (list, tuple)):
+            batch = list(wps_data)
+        else:
+            batch = []
+            # common wrappers
+            maybe = getattr(wps_data, "data", None)
+            if maybe is not None:
+                batch = list(maybe) if isinstance(maybe, (list, tuple)) else list(getattr(maybe, "waypoints", []) or [])
+            else:
+                batch = list(getattr(wps_data, "waypoints", []) or [])
+
+        print(f"[WAYPOINTS] page={page} got {len(batch)}")
+        all_dtos.extend(batch)
+
+        # If pagination not supported or last page is short, stop
+        if not batch or len(batch) < limit:
+            break
+        page += 1
+
+
+    if not all_dtos:
+        print("[WAYPOINTS][WARN] No waypoints returned for system", system_symbol)
+        return
+
+    # 4) adapt and upsert
+    from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos
+    try:
+        waypoints = adapt_waypoints(all_dtos)
+        # flatten and write traits directly from DTOs
+        trait_rows = adapt_traits_from_waypoint_dtos(all_dtos)
+        upsert_many(conn, TableSpec(table="waypoints", pk="symbol", add_updated_at=True), waypoints)
+        if trait_rows:
+            upsert_many(conn, TableSpec(table="waypoint_traits", pk="id", add_updated_at=True), trait_rows)
+        upsert_many(conn, TableSpec(table="waypoints", pk="symbol", add_updated_at=True), waypoints)
+        print(f"✓ Upserted {len(waypoints)} waypoints and {len(trait_rows)} waypoint_traits")
+    except Exception as e:
+        print(f"[WAYPOINTS][ERROR] adapt/upsert failed: {e!r}")
+
 # --- main ---------------------------------------------------------------------
 async def async_main() -> None:
-    # Single sqlite connection (auto-repo will create/alter tables as needed)
+    import sqlite3
     conn = sqlite3.connect("spacetraders.db")
 
     try:
+        # client is only valid INSIDE this context manager
         with setup_client_from_env() as client:
+            # ------------------------------------------------------------------
+            # 1) seed waypoints based on agent HQ (this uses AgentsApi + SystemsApi)
+            # ------------------------------------------------------------------
+            try:
+                await load_waypoints_from_agent(conn, client)
+            except Exception as e:
+                import traceback
+                print("[WAYPOINTS][FATAL] Unexpected error:", repr(e))
+                traceback.print_exc()
+
+            # ------------------------------------------------------------------
+            # 2) existing fleet flow (get_my_ships, adapt, write, etc.)
+            # ------------------------------------------------------------------
             fleet = FleetApi(client)
 
             print("[1/5] Fetching my ships...")
@@ -115,7 +232,6 @@ async def async_main() -> None:
 
             print(f"[2/5] Adapting {len(ships)} ship(s) to domain slices...")
             activities = [adapt_ships_activity_from_ship(d) for d in ships]
-            print("DEBUG first activity model_dump:", activities[0].model_dump())
             specs = [adapt_ships_specs_from_ship(d) for d in ships]
 
             print("\n=== ShipsActivity (telemetry) ===")
@@ -126,12 +242,9 @@ async def async_main() -> None:
             for s in specs[:5]:
                 print_specs(s)
 
-            print("\n[3/5] Writing to SQLite (spacetraders.db) via auto-repo...")
-            for a in activities[:3]:
-                print("DEBUG upsert row:", a.symbol, a.status, a.flight_mode, a.cooldown_remaining_seconds)
+            from db.auto_repo_sqlite import TableSpec, upsert_many
             upsert_many(conn, TableSpec(table="ships_activity", pk="symbol"), activities)
             upsert_many(conn, TableSpec(table="ships_specs", pk="symbol"), specs)
-            print("    ✓ Upserts complete.")
 
             symbol = getattr(ships[0], "symbol", None)
             if symbol:
@@ -144,15 +257,16 @@ async def async_main() -> None:
                         updated = merge_activity_with_nav(act0, nav_dto)
                         print("\n=== After nav update ===")
                         print_activity(updated)
-                        # write the updated activity row back to SQLite
                         upsert_many(conn, TableSpec(table="ships_activity", pk="symbol"), [updated])
                         print("    ✓ Updated activity written to SQLite.")
                 except Exception as e:
                     print(f"[WARN] get_ship_nav failed for {symbol}: {e}")
 
-            print("\n[5/5] Done. Tables: ships_specs, ships_activity (ordered by updated_at in inspector).")
+            print("\n[5/5] Done.")
+
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     asyncio.run(async_main())

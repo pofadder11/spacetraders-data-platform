@@ -1,0 +1,16 @@
+# domain/waypoint_trait.py
+from __future__ import annotations
+from typing import Optional
+from pydantic import BaseModel
+
+class WaypointTraitRow(BaseModel):
+    # Deterministic PK: waypoint + trait (keeps upserts idempotent)
+    id: str
+
+    waypoint_symbol: str
+    type: Optional[str] = None
+    x: Optional[int] = None
+    y: Optional[int] = None
+
+    trait_symbol: str
+    trait_description: Optional[str] = None

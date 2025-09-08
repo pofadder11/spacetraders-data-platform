@@ -22,17 +22,13 @@ def _py_to_sqlite(ann: Any) -> str:
     """
     Map a typing annotation to an SQLite column type.
     - Optional[T] / Union[T, None] -> T
-    - List/Dict/... -> TEXT (JSON-encoded)
+    - List/Dict/Tuple/Set/... -> TEXT (JSON-encoded)
     """
     origin = get_origin(ann)
     if origin is None:
         return _SQLITE_TYPE.get(ann, "TEXT")
 
-    # Handle Optional[T] / Union[T, None]
-    if origin is type(None):
-        return "TEXT"
-
-    # typing.Union / PEP604 union (T | None)
+    # Optional[T] / Union[T, None]
     try:
         from typing import Union  # noqa
         if origin is Union:
@@ -42,7 +38,7 @@ def _py_to_sqlite(ann: Any) -> str:
     except Exception:
         pass
 
-    # Lists, Dicts, Tuples etc -> store as JSON string
+    # Any parametrized/collection type -> TEXT (store JSON)
     return "TEXT"
 
 def _utcnow_iso() -> str:
@@ -50,11 +46,11 @@ def _utcnow_iso() -> str:
 
 def _to_sql_value(v: Any) -> Any:
     """
-    Coerce Python values into something sqlite3 can bind.
-    - primitives: keep as-is
+    Coerce Python values into types sqlite3 can bind.
+    - primitives: as-is
     - datetime/date/time: isoformat string
     - list/tuple/set/dict: json.dumps
-    - bytes: keep as-is
+    - bytes: as-is
     - everything else: str()
     """
     if v is None:
@@ -67,6 +63,7 @@ def _to_sql_value(v: Any) -> Any:
         try:
             return json.dumps(v)
         except TypeError:
+            # stringify non-serializable members
             def _safe(o):
                 try:
                     json.dumps(o)
@@ -75,8 +72,7 @@ def _to_sql_value(v: Any) -> Any:
                     return str(o)
             if isinstance(v, dict):
                 return json.dumps({k: _safe(x) for k, x in v.items()})
-            else:
-                return json.dumps([_safe(x) for x in v])
+            return json.dumps([_safe(x) for x in v])
     return str(v)
 
 @dataclass
@@ -129,8 +125,11 @@ def upsert_many(conn: sqlite3.Connection, spec: TableSpec, models: Iterable[Any]
     """
     Upsert any number of Pydantic domain model instances into the table,
     serializing non-primitive fields automatically.
-    IMPORTANT: Columns are derived from the model class annotations (DRY),
-    not from the first instance's dump (which may omit None fields).
+
+    IMPORTANT:
+    - Columns are derived from the model class annotations (DRY),
+      not from the first instance's dump (which may omit None fields).
+    - Performs INSERT OR REPLACE (row-level last-write-wins) keyed by `spec.pk`.
     """
     models = list(models)
     if not models:
@@ -141,7 +140,7 @@ def upsert_many(conn: sqlite3.Connection, spec: TableSpec, models: Iterable[Any]
     # Ensure table exists with all annotated columns
     ensure_table_for_domain(conn, model_cls, spec)
 
-    # Build the full column list from annotations
+    # Full column list from annotations (stable order)
     ann_cols = list(getattr(model_cls, "__annotations__", {}).keys())
     cols = ann_cols.copy()
     if spec.add_updated_at and "updated_at" not in cols:
@@ -153,7 +152,7 @@ def upsert_many(conn: sqlite3.Connection, spec: TableSpec, models: Iterable[Any]
 
     cur = conn.cursor()
     for m in models:
-        data = m.model_dump(mode="python")  # may omit None, so use .get below
+        data = m.model_dump(mode="python")  # may omit None; we .get(...)
         if spec.add_updated_at:
             data["updated_at"] = _utcnow_iso()
         vals = [_to_sql_value(data.get(c)) for c in cols]
