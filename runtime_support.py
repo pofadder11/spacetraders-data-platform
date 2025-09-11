@@ -54,13 +54,10 @@ with setup_client_from_env() as client:
     agents_api = AgentsApi(client)
 
 # ---------- async bridge + unwrap ---------------------------------------------
-async def maybe_await(api_obj: Any, method_name: str, *args, **kwargs) -> Any:
+async def call_sdk(api_obj: Any, method_name: str, *args, **kwargs) -> Any:
     fn = getattr(api_obj, method_name)
     if inspect.iscoroutinefunction(fn):
         return await fn(*args, **kwargs)
-    result = fn(*args, **kwargs)
-    if inspect.isawaitable(result):
-        return await result
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
 
@@ -105,25 +102,25 @@ def build_nav_request(waypoint_symbol: str) -> Any:
 
 # ---------- safe API call wrappers (hide SDK differences) ---------------------
 async def api_get_my_ships(fleet_api) -> list[Any]:
-    resp = await maybe_await(fleet_api, "get_my_ships")
+    resp = await call_sdk(fleet_api, "get_my_ships")
     data = unwrap_data(resp)
     return list(data) if isinstance(data, (list, tuple)) else list(data or [])
 
 async def api_get_ship_nav(fleet_api, ship_symbol: str) -> Any:
-    resp = await maybe_await(fleet_api, "get_ship_nav", ship_symbol=ship_symbol)
+    resp = await call_sdk(fleet_api, "get_ship_nav", ship_symbol=ship_symbol)
     return unwrap_data(resp)
 
 async def api_get_my_agent(agents_api) -> Any:
-    resp = await maybe_await(agents_api, "get_my_agent")
+    resp = await call_sdk(agents_api, "get_my_agent")
     return unwrap_data(resp)
 
 async def api_refuel_ship(fleet_api, ship_symbol: str) -> Optional[Any]:
     try:
-        resp = await maybe_await(fleet_api, "refuel_ship", ship_symbol=ship_symbol, refuel_ship_request={})
+        resp = await call_sdk(fleet_api, "refuel_ship", ship_symbol=ship_symbol, refuel_ship_request={})
         return unwrap_data(resp)
     except TypeError:
         try:
-            resp = await maybe_await(fleet_api, "refuel_ship", ship_symbol=ship_symbol, body={})
+            resp = await call_sdk(fleet_api, "refuel_ship", ship_symbol=ship_symbol, body={})
             return unwrap_data(resp)
         except Exception:
             return None
@@ -131,15 +128,18 @@ async def api_refuel_ship(fleet_api, ship_symbol: str) -> Optional[Any]:
         return None
 
 async def api_orbit_ship(fleet_api, ship_symbol: str) -> None:
-    await maybe_await(fleet_api, "orbit_ship", ship_symbol=ship_symbol)
+    await call_sdk(fleet_api, "orbit_ship", ship_symbol=ship_symbol)
 
 async def api_dock_ship(fleet_api, ship_symbol: str) -> None:
-    await maybe_await(fleet_api, "dock_ship", ship_symbol=ship_symbol)
+    await call_sdk(fleet_api, "dock_ship", ship_symbol=ship_symbol)
 
 async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -> Any:
-    await nav_prep(ship_symbol)
-    waypoint_symbol = await build_nav_request(waypoint_symbol)
-    resp = await maybe_await(fleet_api, "navigate_ship", ship_symbol=ship_symbol, waypoint_symbol=waypoint_symbol)
+    await nav_prep(ship_symbol=ship_symbol, waypoint_symbol=waypoint_symbol)
+    req = build_nav_request(waypoint_symbol)
+    try:
+        resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, navigate_ship_request=req)
+    except TypeError:
+        resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, body=req)
     return unwrap_data(resp)
 
 async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]:
@@ -148,10 +148,10 @@ async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]
     page, limit = 1, 20
     while True:
         try:
-            resp = await maybe_await(systems_api, "get_system_waypoints", system_symbol=system_symbol, page=page, limit=limit)
+            resp = await call_sdk(systems_api, "get_system_waypoints", system_symbol=system_symbol, page=page, limit=limit)
             data = unwrap_data(resp)
         except TypeError:
-            resp = await maybe_await(systems_api, "get_system_waypoints", system_symbol=system_symbol)
+            resp = await call_sdk(systems_api, "get_system_waypoints", system_symbol=system_symbol)
             data = unwrap_data(resp)
 
         if data is None:
@@ -166,10 +166,14 @@ async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]
         page += 1
     return all_dtos
 
-async def nav_prep(ship_symbol):
+async def nav_prep(ship_symbol, waypoint_symbol):
 
     ships_activity_obj = await build_fleet_object(fleet_api)
     act = ships_activity_obj.get(ship_symbol)
+
+    if act.destination_waypoint == waypoint_symbol:
+        print("Ship is already at the destination")
+        exit
 
     if act.transit_check == True:
         now = datetime.now(timezone.utc)
@@ -195,7 +199,7 @@ async def nav_prep(ship_symbol):
 
 async def build_fleet_object(fleet_api: FleetApi) -> FleetObject:
     """Call get_my_ships() once and adapt to domain for logic checks."""
-    resp = await maybe_await(fleet_api, "get_my_ships")
+    resp = await call_sdk(fleet_api, "get_my_ships")
     dtos: Iterable[Any] = unwrap_data(resp)
     adapted = [adapt_ships_activity_from_ship(d) for d in dtos]
     print(f"[BOOT] Adapted {len(adapted)} ships into fleet_object")
@@ -235,14 +239,14 @@ class FleetObject:
 # ---------------------------- bootstrap ---------------------------------------
 async def build_fleet_object(fleet_api: FleetApi) -> FleetObject:
     """Call get_my_ships() once and adapt to domain for logic checks."""
-    resp = await maybe_await(fleet_api, "get_my_ships")
+    resp = await call_sdk(fleet_api, "get_my_ships")
     dtos: Iterable[Any] = unwrap_data(resp)
     adapted = [adapt_ships_activity_from_ship(d) for d in dtos]
     print(f"[BOOT] Adapted {len(adapted)} ships into fleet_object")
     return FleetObject(adapted)
 
 async def get_agent_hq_waypoint(agents: AgentsApi) -> str:
-    resp = await maybe_await(agents, "get_my_agent")
+    resp = await call_sdk(agents, "get_my_agent")
     agent = unwrap_data(resp)
     hq_wp = getattr(agent, "headquarters", None)
     if not hq_wp or not isinstance(hq_wp, str):

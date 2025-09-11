@@ -38,26 +38,26 @@ class ShipsActivity(BaseModel):
     @property
     def transit_check(self) -> bool:
         if self.status == "IN_TRANSIT":
-            print("waiting for flight to end")
+            #print("waiting for flight to end")
             return True
         else:
-            print("Not in transit, READY")
+            #print("Not in transit, READY")
             return False
 
     @property
     def refuel_check(self) -> bool:
         if self.fuel_level is not None and self.fuel_level < 1:
-            print("refueling")
+            #print("refueling")
             return True
         else:
-            print("Fuel tank full, READY")
+            #print("Fuel tank full, READY")
             return False
 
     @property
     def in_orbit_check(self) -> bool:
         if self.status == "IN_ORBIT":
-            print("In orbit, READY TO NAVIGATE")
+            #print("In orbit, READY TO NAVIGATE")
             return True
         else:
-            print("Not in orbit, going into orbit now")
+            #print("Not in orbit, going into orbit now")
             return False
