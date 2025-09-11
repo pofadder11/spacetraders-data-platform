@@ -8,8 +8,8 @@ class ShipsActivity(BaseModel):
 
     # nav / status
     status: Optional[str] = None
-    dep_time: Optional[datetime] = None      # NEW
-    arr_time: Optional[datetime] = None      # NEW
+    dep_time: Optional[datetime] = None
+    arr_time: Optional[datetime] = None
     flight_mode: Optional[str] = None
 
     # cooldown
@@ -34,3 +34,30 @@ class ShipsActivity(BaseModel):
         if self.fuel_current is None or self.fuel_capacity in (None, 0):
             return None
         return self.fuel_current / self.fuel_capacity
+
+    @property
+    def transit_check(self) -> bool:
+        if self.status == "IN_TRANSIT":
+            print("waiting for flight to end")
+            return True
+        else:
+            print("Not in transit, READY")
+            return False
+
+    @property
+    def refuel_check(self) -> bool:
+        if self.fuel_level is not None and self.fuel_level < 1:
+            print("refueling")
+            return True
+        else:
+            print("Fuel tank full, READY")
+            return False
+
+    @property
+    def in_orbit_check(self) -> bool:
+        if self.status == "IN_ORBIT":
+            print("In orbit, READY TO NAVIGATE")
+            return True
+        else:
+            print("Not in orbit, going into orbit now")
+            return False
