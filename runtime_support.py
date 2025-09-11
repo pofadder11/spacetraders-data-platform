@@ -134,12 +134,15 @@ async def api_dock_ship(fleet_api, ship_symbol: str) -> None:
     await call_sdk(fleet_api, "dock_ship", ship_symbol=ship_symbol)
 
 async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -> Any:
-    await nav_prep(ship_symbol=ship_symbol, waypoint_symbol=waypoint_symbol)
+    print("starting navigation...")
+    ready = await nav_prep(fleet_api, ship_symbol=ship_symbol, waypoint_symbol=waypoint_symbol)
+    print("Prep complete")
+    if not ready:
+        print("[SKIP] Navigation aborted, already at destination")
+        return None  # stop here
     req = build_nav_request(waypoint_symbol)
-    try:
-        resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, navigate_ship_request=req)
-    except TypeError:
-        resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, body=req)
+    resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, navigate_ship_request=req)
+    print(ship_symbol, " has taken off and is in transit")
     return unwrap_data(resp)
 
 async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]:
@@ -166,36 +169,41 @@ async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]
         page += 1
     return all_dtos
 
-async def nav_prep(ship_symbol, waypoint_symbol):
-
+async def nav_prep(fleet_api, ship_symbol: str, waypoint_symbol: str) -> bool:
     ships_activity_obj = await build_fleet_object(fleet_api)
     act = ships_activity_obj.get(ship_symbol)
 
+    # already at destination → stop
     if act.destination_waypoint == waypoint_symbol:
         print("Ship is already at the destination")
-        exit
+        return False
+    else:
+        print("Not at destination, continuing")
 
-    if act.transit_check == True:
-        now = datetime.now(timezone.utc)
+    if act.transit_check:
+        now = datetime.datetime.now(datetime.timezone.utc)
         secs_to_arrival = (act.arr_time - now).total_seconds()
-        print("Seconds until arrival: ", secs_to_arrival)
-        await asyncio.sleep(secs_to_arrival + 3)
+        print("Seconds until arrival:", secs_to_arrival)
+        await asyncio.sleep(secs_to_arrival + 2)
         print("Arrived and ready")
         update = await build_fleet_object(fleet_api)
         new_status = update.get(act.symbol).status
         act.status = new_status
-        print("After arriving, the status of ", act.symbol, " is ", act.status)
+        print("After arriving, the status of", act.symbol, "is", act.status)
 
-    if act.refuel_check == True:
+    if act.refuel_check:
         print("Refuelling now...")
         await api_dock_ship(fleet_api, act.symbol)
-        act.status = ("DOCKED")
-        await asyncio.sleep(3)
+        act.status = "DOCKED"
+        await asyncio.sleep(2)
+        await api_refuel_ship(fleet_api, act.symbol)
 
-    if act.in_orbit_check == False:
+    if not act.in_orbit_check:
         print("Not in orbit, going into orbit now...")
         await api_orbit_ship(fleet_api, act.symbol)
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
+
+    return True   # ready to navigate
 
 async def build_fleet_object(fleet_api: FleetApi) -> FleetObject:
     """Call get_my_ships() once and adapt to domain for logic checks."""
