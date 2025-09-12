@@ -20,4 +20,5 @@
         "/^Remove-Item\\b/i": true
     },
     "chat.editing.autoAcceptDelay": 1,
+    "chatgpt.commentCodeLensEnabled": true,
 }

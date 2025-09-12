@@ -5,16 +5,21 @@
 # using adapters (no DTOs in runner). Also provides nav/ready helpers that UPDATE the state.
 # =================================================================================================
 from __future__ import annotations
+import sqlite3
 import asyncio
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from datetime import datetime, timezone
 
 from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
 from openapi_client.api.systems_api import SystemsApi
 
+from market_runtime import capture_market_for_waypoint
+from db.auto_repo_sqlite import snapshot_many, TableSpec, upsert_many
+from domain.market_rows import MarketGoodRow, MarketTransactionRow
+
 from runtime_support import (
-    maybe_await,
+    call_sdk,
     unwrap_data,
     fmt_dt,
     now_utc,
@@ -132,8 +137,7 @@ async def init_world_state(fleet_api: FleetApi, agents_api: AgentsApi, systems_a
     return WorldState(fleet=fleet_state, waypoints=wp_state, traits=trait_state, agent_hq=hq_wp)
 
 
-# -------- navigation helpers USING STATE (and patching it) --------------------
-async def wait_while_in_transit(fleet_api: FleetApi, state: WorldState, ship_symbol: str) -> None:
+
     while True:
         nav = await api_get_ship_nav(fleet_api, ship_symbol)
         act = state.fleet.merge_nav(ship_symbol, nav)
@@ -150,69 +154,109 @@ async def wait_while_in_transit(fleet_api: FleetApi, state: WorldState, ship_sym
         else:
             await asyncio.sleep(2.0)
 
-async def ensure_ready_to_navigate(fleet_api: FleetApi, state: WorldState, ship_symbol: str, target_waypoint: str) -> None:
-    # Refresh nav → state
+# ---------------------------------- basics ---------------------------------- #
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+def _has_marketplace(traits_by_wp: Optional[Dict[str, Iterable[Any]]], waypoint: str) -> bool:
+    """Return True if traits_by_wp says this waypoint has a MARKETPLACE trait (if provided)."""
+    if not traits_by_wp:
+        return True  # don't block capture if you didn't supply traits
+    rows = traits_by_wp.get(waypoint) or []
+    return any(getattr(r, "trait_symbol", None) == "MARKETPLACE" for r in rows)
+
+def create_market_indexes(conn: sqlite3.Connection) -> None:
+    """Fast once-off helper — safe to call repeatedly."""
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_goods_snap_wp_trade_ts
+        ON market_goods_snapshots(waypoint_symbol, trade_symbol, observed_at)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_goods_snap_trade_ts
+        ON market_goods_snapshots(trade_symbol, observed_at)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tx_wp_trade_ts
+        ON market_transactions(waypoint_symbol, trade_symbol, timestamp)
+    """)
+    conn.commit()
+
+# ---------------------- core: capture + persist for waypoint ----------------- #
+async def snapshot_market_for_waypoint(
+    conn: sqlite3.Connection,
+    systems_api: Any,
+    waypoint_symbol: str,
+    *,
+    include_transactions: bool = True,
+    observed_at: Optional[datetime] = None,
+) -> Dict[str, int]:
+    """
+    Fetch market for `waypoint_symbol`, snapshot goods (append-only time-series),
+    optionally upsert transactions (already have timestamped IDs).
+    Returns counts: {"goods_snap": n, "transactions": m}
+    """
+    rows = await capture_market_for_waypoint(systems_api, waypoint_symbol)
+
+    # Append-only goods snapshots (writes to market_goods_snapshots with composite PK)
+    snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"], observed_at=observed_at)
+
+    # Transactions accumulate naturally (adapter builds unique id with timestamp)
+    tx_count = 0
+    if include_transactions and rows["transactions"]:
+        upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
+        tx_count = len(rows["transactions"])
+
+    # (Optional) backfill explicit waypoint_symbol on tx table for older rows
+    conn.execute("""
+        UPDATE market_transactions
+           SET waypoint_symbol = substr(id, 1, instr(id, '#') - 1)
+         WHERE (waypoint_symbol IS NULL OR waypoint_symbol = '')
+           AND instr(id, '#') > 1
+    """)
+    conn.commit()
+
+    return {"goods_snap": len(rows["goods"]), "transactions": tx_count}
+
+# --------------- convenience: snapshot market for a given ship --------------- #
+async def snapshot_market_for_ship_if_market(
+    conn: sqlite3.Connection,
+    systems_api: Any,
+    fleet_api: Any,
+    ship_symbol: str,
+    *,
+    traits_by_wp: Optional[Dict[str, Iterable[Any]]] = None,
+    include_transactions: bool = True,
+    observed_at: Optional[datetime] = None,
+    strict_check: bool = False,
+) -> Tuple[bool, Optional[str], Dict[str, int]]:
+    """
+    Look up the ship's *current* waypoint via get_ship_nav, optionally verify it has a MARKETPLACE
+    (using traits_by_wp), and snapshot that market. Returns (did_capture, waypoint, counts).
+
+    - If `strict_check=True` and no MARKETPLACE trait is found, it won't call the API.
+    - If `strict_check=False` (default), it will attempt capture regardless (useful if traits cache lags).
+    """
     nav = await api_get_ship_nav(fleet_api, ship_symbol)
-    act = state.fleet.merge_nav(ship_symbol, nav)
-    print(f"[SNAP] {ship_symbol}: status={act.status}, wp={act.current_waypoint}, fuel_level={act.fuel_level}")
+    # Try common locations of the waypoint symbol
+    wp = (
+        getattr(nav, "waypoint_symbol", None)
+        or getattr(getattr(nav, "route", None), "destination", None) and getattr(nav.route.destination, "symbol", None)
+        or getattr(getattr(nav, "route", None), "origin", None) and getattr(nav.route.origin, "symbol", None)
+    )
 
-    # Already at target & not in transit
-    if act.current_waypoint == target_waypoint and status_value(act.status) != "IN_TRANSIT":
-        print(f"[INFO] {ship_symbol} already at {target_waypoint}")
-        return
+    if not isinstance(wp, str) or not wp:
+        return (False, None, {"goods_snap": 0, "transactions": 0})
 
-    # Wait if in transit
-    if status_value(act.status) == "IN_TRANSIT":
-        print(f"[INFO] {ship_symbol} IN_TRANSIT → waiting...")
-        await wait_while_in_transit(fleet_api, state, ship_symbol)
-        act = state.fleet.get(ship_symbol)  # refreshed
+    if strict_check and not _has_marketplace(traits_by_wp, wp):
+        # bail out early if you require an explicit MARKETPLACE trait
+        return (False, wp, {"goods_snap": 0, "transactions": 0})
 
-    # Fuel check via domain property
-    needs_fuel = (act.fuel_level is None) or (act.fuel_level < 1.0)
-    print(f"[CHECK] fuel_level={act.fuel_level} → needs_refuel={needs_fuel}")
-    if needs_fuel:
-        # Dock, refuel, orbit — with state patches
-        try:
-            await api_dock_ship(fleet_api, ship_symbol)
-        except Exception as e:
-            print(f"[WARN] dock_ship: {e}")
-
-        ref = await api_refuel_ship(fleet_api, ship_symbol)
-        if ref:
-            state.fleet.merge_refuel(ship_symbol, ref)
-            print(f"[SNAP] post-refuel fuel_level={state.fleet.get(ship_symbol).fuel_level}")
-
-        # Update nav and orbit if not in transit
-        nav1 = await api_get_ship_nav(fleet_api, ship_symbol)
-        act1 = state.fleet.merge_nav(ship_symbol, nav1)
-        if status_value(act1.status) != "IN_TRANSIT":
-            try:
-                await api_orbit_ship(fleet_api, ship_symbol)
-            except Exception as e:
-                print(f"[WARN] orbit_ship: {e}")
-            nav2 = await api_get_ship_nav(fleet_api, ship_symbol)
-            state.fleet.merge_nav(ship_symbol, nav2)
-
-    # Ensure in orbit finally
-    nav_final = await api_get_ship_nav(fleet_api, ship_symbol)
-    act_final = state.fleet.merge_nav(ship_symbol, nav_final)
-    if status_value(act_final.status) != "IN_ORBIT":
-        try:
-            await api_orbit_ship(fleet_api, ship_symbol)
-        except Exception as e:
-            print(f"[WARN] orbit_ship(final): {e}")
-        nav_after = await api_get_ship_nav(fleet_api, ship_symbol)
-        state.fleet.merge_nav(ship_symbol, nav_after)
-
-async def navigate_and_wait(fleet_api: FleetApi, state: WorldState, ship_symbol: str, target_waypoint: str) -> None:
-    act = state.fleet.get(ship_symbol)
-    if act and act.current_waypoint == target_waypoint and status_value(act.status) != "IN_TRANSIT":
-        print(f"[SKIP] {ship_symbol} already at {target_waypoint}")
-        return
-
-    nav_dto = await api_navigate_ship(fleet_api, ship_symbol, target_waypoint)
-    act2 = state.fleet.merge_nav(ship_symbol, nav_dto)
-    print(f"[NAV] {ship_symbol} → {act2.destination_waypoint or target_waypoint}, arrival {fmt_dt(act2.arr_time)}")
-    await wait_while_in_transit(fleet_api, state, ship_symbol)
-    act3 = state.fleet.get(ship_symbol)
-    print(f"[ARRIVED] {ship_symbol} at {act3.current_waypoint}")
+    counts = await snapshot_market_for_waypoint(
+        conn,
+        systems_api,
+        wp,
+        include_transactions=include_transactions,
+        observed_at=observed_at,
+    )
+    return (True, wp, counts)

@@ -29,7 +29,7 @@ class MarketExchangeRow(BaseModel):
     description: Optional[str] = None
 
 # 4) transactions (market history at the waypoint)
-TxType = Literal["BUY", "SELL"]
+TxType = Literal["BUY", "SELL", "PURCHASE"]
 class MarketTransactionRow(BaseModel):
     id: str                                     # f"{waypoint_symbol}#{ship_symbol or 'UNKNOWN'}#{trade_symbol}#{timestamp_iso}"
     waypoint_symbol: str

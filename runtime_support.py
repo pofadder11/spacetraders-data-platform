@@ -26,8 +26,6 @@ from openapi_client import Configuration, ApiClient
 from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
 
-
-
 # ---------- env + client ------------------------------------------------------
 def _load_env_token() -> Optional[str]:
     try:
@@ -143,6 +141,17 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
     req = build_nav_request(waypoint_symbol)
     resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, navigate_ship_request=req)
     print(ship_symbol, " has taken off and is in transit")
+
+    # wait for arrival before performing next action
+    ships_activity_obj = await build_fleet_object(fleet_api)
+    act = ships_activity_obj.get(ship_symbol)
+    now = datetime.now(timezone.utc)
+    secs_to_arrival = (act.arr_time - now).total_seconds()
+    print("Seconds until arrival:", secs_to_arrival)
+    await asyncio.sleep(secs_to_arrival + 2)
+    print("Arrived and ready")
+    # wait complete
+
     return unwrap_data(resp)
 
 async def api_get_system_waypoints(systems_api, system_symbol: str) -> list[Any]:
@@ -181,7 +190,7 @@ async def nav_prep(fleet_api, ship_symbol: str, waypoint_symbol: str) -> bool:
         print("Not at destination, continuing")
 
     if act.transit_check:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.now(timezone.utc)
         secs_to_arrival = (act.arr_time - now).total_seconds()
         print("Seconds until arrival:", secs_to_arrival)
         await asyncio.sleep(secs_to_arrival + 2)
@@ -245,14 +254,6 @@ class FleetObject:
         return patched
 
 # ---------------------------- bootstrap ---------------------------------------
-async def build_fleet_object(fleet_api: FleetApi) -> FleetObject:
-    """Call get_my_ships() once and adapt to domain for logic checks."""
-    resp = await call_sdk(fleet_api, "get_my_ships")
-    dtos: Iterable[Any] = unwrap_data(resp)
-    adapted = [adapt_ships_activity_from_ship(d) for d in dtos]
-    print(f"[BOOT] Adapted {len(adapted)} ships into fleet_object")
-    return FleetObject(adapted)
-
 async def get_agent_hq_waypoint(agents: AgentsApi) -> str:
     resp = await call_sdk(agents, "get_my_agent")
     agent = unwrap_data(resp)
