@@ -147,26 +147,26 @@ def build_bokeh_map(df_wp: pd.DataFrame,
     if routes:
         xs0, ys0, xs1, ys1 = zip(*routes)
         rsrc = ColumnDataSource(dict(x0=xs0, y0=ys0, x1=xs1, y1=ys1))
-        p.segment("x0","y0","x1","y1", source=rsrc, line_color="#7ddac5", line_width=4, line_alpha=0.35)
-        p.segment("x0","y0","x1","y1", source=rsrc, line_color="#c7ffe3", line_width=2, line_alpha=0.9)
+        p.segment("x0","y0","x1","y1", source=rsrc, line_color="#7ddac5", line_width=2, line_alpha=0.35)
+        p.segment("x0","y0","x1","y1", source=rsrc, line_color="#c7ffe3", line_width=1, line_alpha=0.9)
 
     # --- non-selected waypoints: halo + outline ---
     if isinstance(df_rest, pd.DataFrame) and not df_rest.empty:
         src = ColumnDataSource(df_rest)
-        p.circle("x","y", source=src, size=12, fill_alpha=0.0, line_color="white", line_alpha=0.18, line_width=7)
-        p.circle("x","y", source=src, size=8,  fill_alpha=0.0, line_color="white", line_alpha=0.9,  line_width=2)
+        p.circle("x","y", source=src, size=2, fill_alpha=0.0, line_color="white", line_alpha=0.18, line_width=7)
+        p.circle("x","y", source=src, size=1,  fill_alpha=0.0, line_color="white", line_alpha=0.9,  line_width=2)
 
     # --- selected traits: neon glow + core ---
     if isinstance(df_match, pd.DataFrame) and not df_match.empty:
         msrc = ColumnDataSource(df_match)
-        p.circle("x","y", source=msrc, size=16, fill_alpha=0.12, line_color="color", line_alpha=0.35, line_width=7, color="color")
-        p.circle("x","y", source=msrc, size=9,  fill_alpha=0.9,  line_color="#e8ffe8", line_alpha=0.7, line_width=1.0, color="color")
+        p.circle("x","y", source=msrc, size=8, fill_alpha=0.1, line_color="color", line_alpha=0.05, line_width=7, color="color")
+        p.circle("x","y", source=msrc, size=7,  fill_alpha=0.9,  line_color="#e8ffe8", line_alpha=0.7, line_width=2, color="color")
 
     # --- ship marker ---
     if isinstance(ship_xy, (tuple, list)) and len(ship_xy) == 2:
         cx, cy = ship_xy
         if cx is not None and cy is not None:
-            p.triangle(x=[cx], y=[cy], size=14, fill_color="#e0ffe2", line_color=None)
+            p.triangle(x=[cx], y=[cy], size=6, fill_color="#e0ffe2", line_color=None)
 
     return p
 
@@ -755,5 +755,3 @@ async def _on_load():
 
 pn.state.onload(_on_load)
 page.servable(title="SpaceTraders • Markets & Movement")
-
-

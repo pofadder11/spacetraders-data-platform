@@ -91,6 +91,13 @@ def status_value(enum_like: Any) -> str:
 def is_in_transit(nav_like: Any) -> bool:
     return status_value(getattr(nav_like, "status", None)) == "IN_TRANSIT"
 
+def build_purchase_cargo_request(cargo_symbol: str, units: int) -> Any:
+    try:
+        from openapi_client.models.purchase_cargo_request import PurchaseCargoRequest  # type: ignore
+        return PurchaseCargoRequest(cargo_symbol=cargo_symbol, units=units)
+    except Exception:
+        return {"symbol": cargo_symbol, "units": units}
+    
 def build_nav_request(waypoint_symbol: str) -> Any:
     try:
         from openapi_client.models.navigate_ship_request import NavigateShipRequest  # type: ignore
@@ -151,6 +158,12 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
     await asyncio.sleep(secs_to_arrival + 2)
     print("Arrived and ready")
     # wait complete
+
+    return unwrap_data(resp)
+
+async def api_purchase_cargo(fleet_api, ship_symbol:str, cargo_symbol:str, units: int):
+    req = build_purchase_cargo_request(cargo_symbol=cargo_symbol, units=units)
+    resp = await call_sdk(fleet_api, "purchase_cargo", ship_symbol=ship_symbol , purchase_cargo_request = req)
 
     return unwrap_data(resp)
 
