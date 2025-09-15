@@ -111,6 +111,30 @@ class WorldState:
         self.traits = traits
         self.agent_hq = agent_hq
 
+    def ensure_activity(self, symbol: str) -> ShipsActivity:
+        a = self.activities.get(symbol)
+        if a is None:
+            a = ShipsActivity(symbol=symbol)
+            self.activities[symbol] = a
+        return a
+
+    def update_activity_from_nav(self, symbol: str, nav_dto: Any) -> ShipsActivity:
+        current = self.ensure_activity(symbol)
+        updated = merge_activity_with_nav(current, nav_dto)
+        self.activities[symbol] = updated
+        return updated
+
+    def update_activity_from_refuel(self, symbol: str, resp_dto: Any) -> ShipsActivity:
+        """Use refuel response to update fuel state in local activity."""
+        current = self.ensure_activity(symbol)
+        fuel_cur = getattr(getattr(resp_dto, "fuel", None), "current", None)
+        fuel_cap = getattr(getattr(resp_dto, "fuel", None), "capacity", None)
+        patched = current.model_copy(update={
+            "fuel_current": fuel_cur if fuel_cur is not None else current.fuel_current,
+            "fuel_capacity": fuel_cap if fuel_cap is not None else current.fuel_capacity,
+        })
+        self.activities[symbol] = patched
+        return patched
 
 # -------- initialization (one-time at runner start) ---------------------------
 async def init_world_state(fleet_api: FleetApi, agents_api: AgentsApi, systems_api: SystemsApi) -> WorldState:
@@ -135,24 +159,6 @@ async def init_world_state(fleet_api: FleetApi, agents_api: AgentsApi, systems_a
     trait_state = WaypointTraitsState(traits)
 
     return WorldState(fleet=fleet_state, waypoints=wp_state, traits=trait_state, agent_hq=hq_wp)
-
-
-
-    while True:
-        nav = await api_get_ship_nav(fleet_api, ship_symbol)
-        act = state.fleet.merge_nav(ship_symbol, nav)
-        if not is_in_transit(nav):
-            return
-        arrival = getattr(getattr(nav, "route", None), "arrival", None)
-        print(f"[WAIT] {ship_symbol} in transit; arrival {fmt_dt(arrival)}")
-        now = now_utc()
-        if arrival and getattr(arrival, "tzinfo", None) is None:
-            arrival = arrival.replace(tzinfo=timezone.utc)
-        if arrival:
-            secs = (arrival - now).total_seconds()
-            await asyncio.sleep(max(secs, 0) + 1.0)
-        else:
-            await asyncio.sleep(2.0)
 
 # ---------------------------------- basics ---------------------------------- #
 def _now_utc() -> datetime:
@@ -220,6 +226,7 @@ async def snapshot_market_for_waypoint(
 
 # --------------- convenience: snapshot market for a given ship --------------- #
 async def snapshot_market_for_ship_if_market(
+    
     conn: sqlite3.Connection,
     systems_api: Any,
     fleet_api: Any,
