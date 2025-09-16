@@ -106,6 +106,13 @@ def build_purchase_cargo_request(cargo_symbol: str, units: int) -> Any:
     except Exception:
         return {"symbol": cargo_symbol, "units": units}
     
+def build_sell_cargo_request(cargo_symbol: str, units: int) -> Any:
+    try:
+        from openapi_client.models.sell_cargo_request import SellCargoRequest  # type: ignore
+        return SellCargoRequest(cargo_symbol=cargo_symbol, units=units)
+    except Exception:
+        return {"symbol": cargo_symbol, "units": units}
+    
 def build_nav_request(waypoint_symbol: str) -> Any:
     try:
         from openapi_client.models.navigate_ship_request import NavigateShipRequest  # type: ignore
@@ -180,9 +187,35 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
 
     return unwrap_data(resp)
 
-async def api_purchase_cargo(fleet_api, ship_symbol:str, cargo_symbol:str, units: int):
+from market_runtime import capture_market_for_waypoint
+from db.auto_repo_sqlite import snapshot_many, upsert_many, TableSpec
+from domain.market_rows import MarketGoodRow
+from openapi_client.api.systems_api import SystemsApi
+
+with setup_client_from_env() as client:
+    fleet_api = FleetApi(client)
+    agents_api = AgentsApi(client)
+    systems_api = SystemsApi(client)
+
+async def market_to_db(waypoint: str) -> None:
+    # Fetch first (network I/O), then write to DB (short-lived connection)
+    rows = await capture_market_for_waypoint(systems_api, waypoint)
+    with sqlite3.connect("spacetraders.db") as conn:
+        snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
+        if rows["transactions"]:
+            upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
+
+async def api_purchase_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, cargo_symbol:str, units: int):
     req = build_purchase_cargo_request(cargo_symbol=cargo_symbol, units=units)
     resp = await call_sdk(fleet_api, "purchase_cargo", ship_symbol=ship_symbol , purchase_cargo_request = req)
+    await market_to_db(waypoint = waypoint_symbol)
+
+    return unwrap_data(resp)
+
+async def api_sell_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, cargo_symbol:str, units: int):
+    req = build_sell_cargo_request(cargo_symbol=cargo_symbol, units=units)
+    resp = await call_sdk(fleet_api, "sell_cargo", ship_symbol=ship_symbol , sell_cargo_request = req)
+    await market_to_db(waypoint = waypoint_symbol)
 
     return unwrap_data(resp)
 
