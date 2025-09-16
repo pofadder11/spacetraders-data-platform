@@ -26,6 +26,14 @@ from openapi_client import Configuration, ApiClient
 from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
 
+from services.journeys_writer import append_journey_from_nav
+from datetime import datetime, timezone
+
+import sqlite3
+
+conn = sqlite3.connect("spacetraders.db")
+
+
 # ---------- env + client ------------------------------------------------------
 def _load_env_token() -> Optional[str]:
     try:
@@ -147,6 +155,17 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
         return None  # stop here
     req = build_nav_request(waypoint_symbol)
     resp = await call_sdk(fleet_api, "navigate_ship", ship_symbol=ship_symbol, navigate_ship_request=req)
+    
+    resp2 = unwrap_data(resp)
+    # extract a nav DTO from the response (supporting both shapes)
+    nav_dto = getattr(resp2, "nav", resp2)
+    # 1) append a journey row (append-only)
+    append_journey_from_nav(
+        ship_symbol,
+        nav_dto,
+        ship_dto_for_counters=getattr(resp2, "nav", None) and resp2 or None,
+        observed_at=datetime.now(timezone.utc),
+    )
     print(ship_symbol, " has taken off and is in transit")
 
     # wait for arrival before performing next action
