@@ -105,11 +105,12 @@ class WaypointTraitsState:
 
 class WorldState:
     """Top-level state the runner will use instead of DTOs."""
-    def __init__(self, fleet: FleetActivityState, waypoints: WaypointsRefState, traits: WaypointTraitsState, agent_hq: str):
+    def __init__(self, fleet: FleetActivityState, waypoints: WaypointsRefState, traits: WaypointTraitsState, agent_hq: str, agent: str):
         self.fleet = fleet
         self.waypoints = waypoints
         self.traits = traits
         self.agent_hq = agent_hq
+        self.agent = agent
 
     def ensure_activity(self, symbol: str) -> ShipsActivity:
         a = self.activities.get(symbol)
@@ -158,7 +159,7 @@ async def init_world_state(fleet_api: FleetApi, agents_api: AgentsApi, systems_a
     wp_state = WaypointsRefState(waypoints)
     trait_state = WaypointTraitsState(traits)
 
-    return WorldState(fleet=fleet_state, waypoints=wp_state, traits=trait_state, agent_hq=hq_wp)
+    return WorldState(fleet=fleet_state, waypoints=wp_state, traits=trait_state, agent_hq=hq_wp, agent = agent)
 
 # ---------------------------------- basics ---------------------------------- #
 def _now_utc() -> datetime:
