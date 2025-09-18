@@ -7,6 +7,8 @@
 from __future__ import annotations
 import sqlite3
 import asyncio
+import os
+import sys
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from datetime import datetime, timezone
 
@@ -14,9 +16,19 @@ from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
 from openapi_client.api.systems_api import SystemsApi
 
-from market_runtime import capture_market_for_waypoint
 from db.auto_repo_sqlite import snapshot_many, TableSpec, upsert_many
 from domain.market_rows import MarketGoodRow, MarketTransactionRow
+from domain.waypoint_ref import WaypointRef
+from domain.waypoint_trait import WaypointTraitRow
+from domain.fleet_state import FleetState
+from domain.ships_activity import ShipsActivity
+
+from market_runtime import capture_market_for_waypoint
+
+from adapters.ships_specs_adapter import adapt_ships_specs_from_ship
+from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merge_activity_with_nav
+from adapters.waypoint_adapter import adapt_waypoints              # returns List[WaypointRef]
+from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos  # returns List[WaypointTraitRow]
 
 from runtime_support import (
     call_sdk,
@@ -35,12 +47,34 @@ from runtime_support import (
     api_get_system_waypoints,
 )
 
-# domain + adapters you already have
-from domain.ships_activity import ShipsActivity
-from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merge_activity_with_nav
+from openapi_client import Configuration, ApiClient
 
-from adapters.waypoint_adapter import adapt_waypoints              # returns List[WaypointRef]
-from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos  # returns List[WaypointTraitRow]
+def _load_env_token() -> Optional[str]:
+    try:
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv()
+    except Exception:
+        pass
+    return os.getenv("BEARER_TOKEN")
+
+def setup_client_from_env() -> ApiClient:
+    token = _load_env_token()
+    if not token:
+        print("[FATAL] Missing BEARER_TOKEN in environment or .env")
+        sys.exit(1)
+    cfg = Configuration()
+    cfg.host = "https://api.spacetraders.io/v2"
+    cfg.api_key = {"Authorization": token}
+    cfg.api_key_prefix = {"Authorization": "Bearer"}
+    cfg.access_token = token
+    return ApiClient(cfg)
+
+with setup_client_from_env() as client:
+    fleet_api = FleetApi(client)
+    agents_api = AgentsApi(client)
+    systems_api = SystemsApi(client)
+
+conn = sqlite3.connect("spacetraders.db")
 
 
 class FleetActivityState:
@@ -161,9 +195,76 @@ async def init_world_state(fleet_api: FleetApi, agents_api: AgentsApi, systems_a
 
     return WorldState(fleet=fleet_state, waypoints=wp_state, traits=trait_state, agent_hq=hq_wp, agent = agent)
 
+#---- check if load_initial_fleet_state is duplicating what world state already does
+
+async def load_initial_fleet_state(fleet: FleetApi) -> FleetState:
+    """Load ships once, build local state (activity + specs) and persist to DB."""
+    conn = sqlite3.connect("spacetraders.db")
+    resp = await call_sdk(fleet, "get_my_ships")
+    ships: Iterable[Any] = unwrap_data(resp)
+    ships = list(ships)
+    if not ships:
+        raise SystemExit("[FATAL] No ships returned; check token/agent.")
+
+    activities = [adapt_ships_activity_from_ship(d) for d in ships]
+    specs = [adapt_ships_specs_from_ship(d) for d in ships]
+
+    # Persist to DB (idempotent upserts)
+    upsert_many(conn, TableSpec(table="ships_activity", pk="symbol"), activities)
+    upsert_many(conn, TableSpec(table="ships_specs", pk="symbol"), specs)
+
+    # Build local state dicts
+    state = FleetState(
+        activities={a.symbol: a for a in activities if a.symbol},
+        specs={s.symbol: s for s in specs if s.symbol},
+    )
+    return state
+
+
+async def load_initial_waypoint_state(
+    agents: AgentsApi,
+    systems: SystemsApi,
+) -> Tuple[List[WaypointRef], List[WaypointTraitRow]]:
+    """
+    Resolve the agent HQ's system, pull all waypoints in that system,
+    adapt to domain rows, and persist to DB (idempotent upserts).
+    Returns (waypoint_refs, waypoint_traits).
+    """
+    conn = sqlite3.connect("spacetraders.db")
+    
+    # 1) Figure out which system to index from agent HQ
+    agent_resp = await call_sdk(agents, "get_my_agent")
+    agent = unwrap_data(agent_resp)
+    hq_wp = getattr(agent, "headquarters", None)
+    if not hq_wp or "-" not in str(hq_wp):
+        raise RuntimeError("Agent headquarters missing or malformed, cannot derive system.")
+    sys_symbol = "-".join(str(hq_wp).split("-")[:2])  # e.g. "X1-HA25"
+
+    # 2) Pull the system waypoints (DTO list)
+    #    NOTE: If your client uses a different method name (e.g. list_system_waypoints),
+    #          swap it here. The signature usually takes system_symbol, plus page/limit.
+    
+    wps_resp = await api_get_system_waypoints(systems, system_symbol=sys_symbol)
+    wps_dtos: Iterable[Any] = unwrap_data(wps_resp)
+
+    # 3) Adapt → domain types
+    waypoint_refs: List[WaypointRef] = adapt_waypoints(wps_dtos)
+    waypoint_traits: List[WaypointTraitRow] = adapt_traits_from_waypoint_dtos(wps_dtos)
+
+    # 4) Persist to DB (idempotent upserts)
+    upsert_many(conn, TableSpec(table="waypoint_refs", pk="symbol"), waypoint_refs)
+
+    # If your TableSpec supports composite PKs, use the tuple form below.
+    # If not, create a UNIQUE index on (waypoint_symbol, trait_symbol) in schema, and keep pk="id" if you have one.
+    upsert_many(conn, TableSpec(table="waypoint_traits", pk=("waypoint_symbol", "trait_symbol")), waypoint_traits)
+
+    conn.commit()
+    return waypoint_refs, waypoint_traits
+
 # ---------------------------------- basics ---------------------------------- #
 def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
 
 def _has_marketplace(traits_by_wp: Optional[Dict[str, Iterable[Any]]], waypoint: str) -> bool:
     """Return True if traits_by_wp says this waypoint has a MARKETPLACE trait (if provided)."""
@@ -171,6 +272,16 @@ def _has_marketplace(traits_by_wp: Optional[Dict[str, Iterable[Any]]], waypoint:
         return True  # don't block capture if you didn't supply traits
     rows = traits_by_wp.get(waypoint) or []
     return any(getattr(r, "trait_symbol", None) == "MARKETPLACE" for r in rows)
+
+
+async def market_to_db(waypoint: str) -> None:
+    # Fetch first (network I/O), then write to DB (short-lived connection)
+    rows = await capture_market_for_waypoint(systems_api, waypoint)
+    with sqlite3.connect("spacetraders.db") as conn:
+        snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
+        if rows["transactions"]:
+            upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
+
 
 def create_market_indexes(conn: sqlite3.Connection) -> None:
     """Fast once-off helper — safe to call repeatedly."""

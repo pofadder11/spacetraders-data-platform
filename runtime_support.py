@@ -15,6 +15,7 @@ from typing import Any, Optional, Dict, Iterable
 
 # Domain + adapters
 from domain.ships_activity import ShipsActivity
+from domain.market_rows import MarketGoodRow
 from adapters.ships_activity_adapter import (
     adapt_ships_activity_from_ship,
     merge_activity_with_nav,
@@ -25,6 +26,7 @@ from openapi_client import Configuration, ApiClient
 # Generated APIs
 from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
+from openapi_client.api.systems_api import SystemsApi
 
 from services.journeys_writer import append_journey_from_nav
 from datetime import datetime, timezone
@@ -58,6 +60,7 @@ def setup_client_from_env() -> ApiClient:
 with setup_client_from_env() as client:
     fleet_api = FleetApi(client)
     agents_api = AgentsApi(client)
+    systems_api = SystemsApi(client)
 
 # ---------- async bridge + unwrap ---------------------------------------------
 async def call_sdk(api_obj: Any, method_name: str, *args, **kwargs) -> Any:
@@ -98,6 +101,8 @@ def status_value(enum_like: Any) -> str:
 
 def is_in_transit(nav_like: Any) -> bool:
     return status_value(getattr(nav_like, "status", None)) == "IN_TRANSIT"
+
+# -------------------- request builds ------------------------------
 
 def build_purchase_cargo_request(cargo_symbol: str, units: int) -> Any:
     try:
@@ -186,24 +191,6 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
     # wait complete
 
     return unwrap_data(resp)
-
-from market_runtime import capture_market_for_waypoint
-from db.auto_repo_sqlite import snapshot_many, upsert_many, TableSpec
-from domain.market_rows import MarketGoodRow
-from openapi_client.api.systems_api import SystemsApi
-
-with setup_client_from_env() as client:
-    fleet_api = FleetApi(client)
-    agents_api = AgentsApi(client)
-    systems_api = SystemsApi(client)
-
-async def market_to_db(waypoint: str) -> None:
-    # Fetch first (network I/O), then write to DB (short-lived connection)
-    rows = await capture_market_for_waypoint(systems_api, waypoint)
-    with sqlite3.connect("spacetraders.db") as conn:
-        snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
-        if rows["transactions"]:
-            upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
 
 async def api_purchase_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, cargo_symbol:str, units: int):
     req = build_purchase_cargo_request(cargo_symbol=cargo_symbol, units=units)
