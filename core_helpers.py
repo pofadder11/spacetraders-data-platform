@@ -9,8 +9,12 @@ import sqlite3
 import asyncio
 import os
 import sys
+import math
+import pandas as pd
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from datetime import datetime, timezone
+import numpy as np
+import matplotlib.pyplot as plt
 
 from openapi_client.api.fleet_api import FleetApi
 from openapi_client.api.agents_api import AgentsApi
@@ -282,6 +286,18 @@ async def market_to_db(waypoint: str) -> None:
         if rows["transactions"]:
             upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
 
+async def get_wps_by_trait(traits_list: str, trait: str):
+
+    data = []
+    for wp_symbol, rows_list in traits_list.items():
+        for row in rows_list:
+            if row.trait_symbol == trait:
+                x = row.x or 0
+                y = row.y or 0
+                data.append({"waypoint": wp_symbol, "x": x, "y": y, "distance": math.hypot(x, y)})
+    data = pd.DataFrame(data).sort_values("distance", ascending=True).reset_index(drop=True)
+    #print (data.to_string(index=False))
+    return data
 
 def create_market_indexes(conn: sqlite3.Connection) -> None:
     """Fast once-off helper — safe to call repeatedly."""
@@ -379,3 +395,228 @@ async def snapshot_market_for_ship_if_market(
         observed_at=observed_at,
     )
     return (True, wp, counts)
+
+
+# ---------- sort market waypoints in a logical travel order ----------
+
+"""
+market_route_svg.py
+- Build a visit-all-markets route starting at a chosen waypoint
+- Save an SVG showing:
+    • all waypoints (green)
+    • start waypoint (blue)
+    • lines drawn in the visiting order
+
+Requirements:
+    pip install numpy pandas matplotlib
+"""
+# ----------------------------
+# Core TSP-lite helpers
+# ----------------------------
+
+def _euclid(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+    dx, dy = a[0] - b[0], a[1] - b[1]
+    return math.hypot(dx, dy)
+
+def _pairwise_dist_matrix(coords: np.ndarray) -> np.ndarray:
+    # coords: (N,2) -> (N,N) distances
+    diff = coords[:, None, :] - coords[None, :, :]
+    return np.sqrt((diff ** 2).sum(axis=2))
+
+def _nearest_neighbor_tour(D: np.ndarray, start_idx: int) -> List[int]:
+    n = D.shape[0]
+    unvisited = set(range(n))
+    tour = [start_idx]
+    unvisited.remove(start_idx)
+    cur = start_idx
+    while unvisited:
+        nxt = min(unvisited, key=lambda j: D[cur, j])
+        tour.append(nxt)
+        unvisited.remove(nxt)
+        cur = nxt
+    return tour
+
+def _two_opt_once(tour: List[int], D: np.ndarray) -> Tuple[List[int], bool]:
+    """Single 2-opt improvement pass on a *path* (not necessarily a closed tour)."""
+    n = len(tour)
+    best = tour[:]
+    improved = False
+    # Evaluate path length segments (no wrap-around)
+    def seg_len(i1, i2):
+        a, b = best[i1], best[i1 + 1]
+        c, d = best[i2], best[i2 + 1]
+        return D[a, b] + D[c, d]
+    for i in range(0, n - 3):
+        for k in range(i + 2, n - 1):
+            before = seg_len(i, k)
+            after = D[best[i], best[k]] + D[best[i + 1], best[k + 1]]
+            if after + 1e-12 < before:
+                best = best[: i + 1] + list(reversed(best[i + 1 : k + 1])) + best[k + 1 :]
+                improved = True
+    return best, improved
+
+def _two_opt(tour: List[int], D: np.ndarray, max_iters: int = 50) -> List[int]:
+    cur = tour[:]
+    for _ in range(max_iters):
+        cur, improved = _two_opt_once(cur, D)
+        if not improved:
+            break
+    return cur
+
+def _rotate_to_start(tour: List[int], want_first: int) -> List[int]:
+    """Rotate the order so that want_first appears at index 0 (preserves relative order)."""
+    i = tour.index(want_first)
+    return tour[i:] + tour[:i]
+
+def all_market_visitor(
+    markets_df: pd.DataFrame,
+    start_waypoint: Optional[str] = None,
+    return_to_start: bool = False,
+    improve_2opt: bool = True,
+    fix_start_anchor: bool = True,
+) -> pd.DataFrame:
+    """
+    Build a route that visits all markets.
+
+    markets_df: DataFrame with columns ['waypoint', 'x', 'y']
+    start_waypoint: waypoint symbol to start at (required for your use case).
+    return_to_start: if True, append the start at the end (closed loop).
+    improve_2opt: apply 2-opt local improvement to reduce total path length.
+    fix_start_anchor: re-anchor start waypoint at index 0 after 2-opt (keeps your chosen start in front).
+
+    Returns a DataFrame ordered by visit, with leg and cumulative distances.
+    """
+    if markets_df.empty:
+        return pd.DataFrame(columns=["visit_idx", "waypoint", "x", "y", "leg_distance", "cumulative_distance"])
+
+    for col in ["waypoint", "x", "y"]:
+        if col not in markets_df.columns:
+            raise ValueError(f"markets_df must contain column '{col}'")
+
+    df = markets_df[["waypoint", "x", "y"]].copy().reset_index(drop=True)
+    coords = df[["x", "y"]].to_numpy(dtype=float)
+    D = _pairwise_dist_matrix(coords)
+
+    if start_waypoint is None:
+        raise ValueError("Please provide start_waypoint for anchored plotting.")
+
+    if start_waypoint not in set(df["waypoint"]):
+        raise ValueError(f"start_waypoint '{start_waypoint}' not found in markets_df['waypoint']")
+
+    start_idx = int(df.index[df["waypoint"] == start_waypoint][0])
+
+    # Initial heuristic tour
+    tour = _nearest_neighbor_tour(D, start_idx)
+
+    # Optional improvement
+    if improve_2opt and len(tour) >= 4:
+        tour = _two_opt(tour, D)
+
+    # Ensure the chosen start stays first (2-opt can rotate endpoints)
+    if fix_start_anchor:
+        tour = _rotate_to_start(tour, start_idx)
+
+    # Optionally close the loop
+    sequence = tour + ([tour[0]] if return_to_start else [])
+
+    # Distances
+    legs = [0.0]
+    cum = [0.0]
+    for i in range(1, len(sequence)):
+        a, b = sequence[i - 1], sequence[i]
+        dist = D[a, b]
+        legs.append(dist)
+        cum.append(cum[-1] + dist)
+
+    out = df.iloc[sequence].reset_index(drop=True)
+    out.insert(0, "visit_idx", range(len(sequence)))
+    out["leg_distance"] = np.round(legs, 3)
+    out["cumulative_distance"] = np.round(cum, 3)
+    return out
+
+def plot_route_svg(
+    markets_df: pd.DataFrame,
+    route_df: pd.DataFrame,
+    start_waypoint: str,
+    svg_path: str = "markets_route.svg",
+    point_size: float = 40.0,
+    line_width: float = 1.5,
+    annotate_labels: bool = True,
+):
+    
+    # ----------------------------
+    # SVG plotting for visual route assessment
+    # ----------------------------
+    """
+    Save an SVG that shows:
+      - all waypoints (green)
+      - start waypoint (blue)
+      - lines between waypoints in visiting order
+    """
+    # Prepare data
+    xy_all = markets_df[["x", "y"]].to_numpy(float)
+    wp_all = markets_df["waypoint"].astype(str).tolist()
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Lines for visiting order
+    xs = route_df["x"].to_numpy(float)
+    ys = route_df["y"].to_numpy(float)
+    ax.plot(xs, ys, linewidth=line_width, alpha=0.9)
+
+    # Scatter all markets (green)
+    ax.scatter(xy_all[:, 0], xy_all[:, 1], s=point_size, c="green")
+
+    # Highlight start (blue) on top
+    if start_waypoint not in wp_all:
+        raise ValueError(f"start_waypoint '{start_waypoint}' not found in markets_df['waypoint']")
+    start_row = markets_df.loc[markets_df["waypoint"] == start_waypoint].iloc[0]
+    ax.scatter([float(start_row["x"])], [float(start_row["y"])], s=point_size * 1.4, c="blue")
+
+    if annotate_labels:
+        # Label every market
+        for wp, (x, y) in zip(wp_all, xy_all):
+            ax.annotate(str(wp), (x, y), xytext=(5, 5), textcoords="offset points", fontsize=8)
+        # Add visit indices along the route
+        for i, row in route_df.iterrows():
+            ax.annotate(f"{int(row['visit_idx'])}", (row["x"], row["y"]), xytext=(0, -12),
+                        textcoords="offset points", fontsize=8)
+
+    ax.set_aspect("equal")
+    ax.set_title("All-Market Visitor — Anchored Start, Route Lines")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.savefig(svg_path, format="svg")
+    print(f"Saved SVG -> {svg_path}")
+
+async def patrol_markets(ship_symbol: str, markets_df) -> None:
+    # dedupe and coerce to plain list of strings
+    waypoints: List[str] = list(dict.fromkeys(markets_df["waypoint"].astype(str).tolist()))
+    print(waypoints)
+    if not waypoints:
+        print("[WARN] No waypoints to patrol.")
+        return
+
+    print(f"[PATROL] {ship_symbol} looping through {len(waypoints)} markets.")
+    idx = 0
+    while True:
+        wp = waypoints[idx]
+        try:
+            print(f"[PATROL] -> Navigating to {wp} (#{idx+1}/{len(waypoints)})")
+            nav_resp = await api_navigate_ship(fleet_api, ship_symbol, wp)
+            print(f"[MARKET] Capturing {wp} …")
+            await market_to_db(wp)
+            await asyncio.sleep(1.0)  # small dwell
+
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[ERR] Patrol step at {wp} failed: {e!r}")
+            await asyncio.sleep(3.0)  # brief backoff
+
+        # round-robin
+        idx = (idx + 1) % len(waypoints)
