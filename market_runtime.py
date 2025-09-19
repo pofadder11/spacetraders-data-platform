@@ -6,11 +6,22 @@
 # =================================================================================================
 from __future__ import annotations
 
+import sys
+import os
 import asyncio
+import sqlite3
 import math
 from typing import Any, Dict, Iterable, List, Tuple, Callable, Optional
-from runtime_support import call_sdk, unwrap_data  
+from sdk_runtime_helper import call_sdk, unwrap_data
+
+
+from openapi_client.api.fleet_api import FleetApi
+from openapi_client.api.agents_api import AgentsApi  
 from openapi_client.api.systems_api import SystemsApi
+
+from openapi_client import Configuration, ApiClient
+
+from db.auto_repo_sqlite import snapshot_many, TableSpec, upsert_many
 
 from domain.market_rows import (
     MarketExportRow, MarketImportRow, MarketExchangeRow,
@@ -19,6 +30,33 @@ from domain.market_rows import (
 from adapters.market_adapter import (
     adapt_market_all,
 )
+
+
+
+def _load_env_token() -> Optional[str]:
+    try:
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv()
+    except Exception:
+        pass
+    return os.getenv("BEARER_TOKEN")
+
+def setup_client_from_env() -> ApiClient:
+    token = _load_env_token()
+    if not token:
+        print("[FATAL] Missing BEARER_TOKEN in environment or .env")
+        sys.exit(1)
+    cfg = Configuration()
+    cfg.host = "https://api.spacetraders.io/v2"
+    cfg.api_key = {"Authorization": token}
+    cfg.api_key_prefix = {"Authorization": "Bearer"}
+    cfg.access_token = token
+    return ApiClient(cfg)
+
+with setup_client_from_env() as client:
+    fleet_api = FleetApi(client)
+    agents_api = AgentsApi(client)
+    systems_api = SystemsApi(client)
 
 # -----------------------------------------------------------------------------------------------
 # Small utils
@@ -200,3 +238,11 @@ async def capture_markets_for_nearest_marketplaces(
         on_batch=on_batch,
         delay_seconds=delay_seconds,
     )
+
+async def market_to_db(waypoint: str) -> None:
+    # Fetch first (network I/O), then write to DB (short-lived connection)
+    rows = await capture_market_for_waypoint(systems_api, waypoint)
+    with sqlite3.connect("spacetraders.db") as conn:
+        snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
+        if rows["transactions"]:
+            upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])

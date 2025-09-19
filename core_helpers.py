@@ -27,16 +27,16 @@ from domain.waypoint_trait import WaypointTraitRow
 from domain.fleet_state import FleetState
 from domain.ships_activity import ShipsActivity
 
-from market_runtime import capture_market_for_waypoint
+from market_runtime import capture_market_for_waypoint, market_to_db
 
 from adapters.ships_specs_adapter import adapt_ships_specs_from_ship
 from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merge_activity_with_nav
 from adapters.waypoint_adapter import adapt_waypoints              # returns List[WaypointRef]
 from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos  # returns List[WaypointTraitRow]
 
+from sdk_runtime_helper import call_sdk, unwrap_data
+
 from runtime_support import (
-    call_sdk,
-    unwrap_data,
     fmt_dt,
     now_utc,
     is_in_transit,
@@ -50,6 +50,8 @@ from runtime_support import (
     api_navigate_ship,
     api_get_system_waypoints,
 )
+
+from refuel_routing import Node
 
 from openapi_client import Configuration, ApiClient
 
@@ -276,15 +278,6 @@ def _has_marketplace(traits_by_wp: Optional[Dict[str, Iterable[Any]]], waypoint:
         return True  # don't block capture if you didn't supply traits
     rows = traits_by_wp.get(waypoint) or []
     return any(getattr(r, "trait_symbol", None) == "MARKETPLACE" for r in rows)
-
-
-async def market_to_db(waypoint: str) -> None:
-    # Fetch first (network I/O), then write to DB (short-lived connection)
-    rows = await capture_market_for_waypoint(systems_api, waypoint)
-    with sqlite3.connect("spacetraders.db") as conn:
-        snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
-        if rows["transactions"]:
-            upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
 
 async def get_wps_by_trait(traits_list: str, trait: str):
 
@@ -620,3 +613,43 @@ async def patrol_markets(ship_symbol: str, markets_df) -> None:
 
         # round-robin
         idx = (idx + 1) % len(waypoints)
+
+def build_nodes_from_traits_dict(
+    traits_dict: Dict[str, List[WaypointTraitRow]],
+    fuel_price_lookup: Dict[str, float] = None,
+) -> List[Node]:
+    """
+    Convert a dict of {waypoint_symbol: [WaypointTraitRow, ...]} into Node objects.
+
+    Args:
+        traits_dict: mapping from waypoint_symbol -> list of WaypointTraitRow.
+        fuel_price_lookup: optional {waypoint_symbol: price} for refining
+                           Node.price (default None).
+
+    Returns:
+        List[Node]
+    """
+    nodes: List[Node] = []
+
+    for symbol, trait_rows in traits_dict.items():
+        if not trait_rows:
+            continue  # skip empty
+
+        # all rows for this waypoint share x,y,type
+        first = trait_rows[0]
+        x, y = float(first.x), float(first.y)
+
+        # check if any trait is a MARKETPLACE
+        has_marketplace = any(tr.trait_symbol == "MARKETPLACE" for tr in trait_rows)
+
+        # build Node
+        node = Node(
+            symbol=symbol,
+            x=x,
+            y=y,
+            has_fuel=has_marketplace,
+            price=(fuel_price_lookup.get(symbol) if fuel_price_lookup else None),
+        )
+        nodes.append(node)
+
+    return nodes

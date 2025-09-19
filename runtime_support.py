@@ -21,6 +21,10 @@ from adapters.ships_activity_adapter import (
     merge_activity_with_nav,
 )
 
+from market_runtime import market_to_db
+
+from sdk_runtime_helper import call_sdk, unwrap_data
+
 from openapi_client import Configuration, ApiClient
 
 # Generated APIs
@@ -61,17 +65,6 @@ with setup_client_from_env() as client:
     fleet_api = FleetApi(client)
     agents_api = AgentsApi(client)
     systems_api = SystemsApi(client)
-
-# ---------- async bridge + unwrap ---------------------------------------------
-async def call_sdk(api_obj: Any, method_name: str, *args, **kwargs) -> Any:
-    fn = getattr(api_obj, method_name)
-    if inspect.iscoroutinefunction(fn):
-        return await fn(*args, **kwargs)
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
-
-def unwrap_data(resp: Any) -> Any:
-    return getattr(resp, "data", resp)
 
 # ---------- small utils -------------------------------------------------------
 def now_utc() -> datetime:
@@ -120,10 +113,17 @@ def build_sell_cargo_request(cargo_symbol: str, units: int) -> Any:
     
 def build_nav_request(waypoint_symbol: str) -> Any:
     try:
-        from openapi_client.models.navigate_ship_request import NavigateShipRequest  # type: ignore
+        from openapi_client.models.navigate_ship_request import NavigateShipRequest
         return NavigateShipRequest(waypoint_symbol=waypoint_symbol)
     except Exception:
         return {"waypoint_symbol": waypoint_symbol, "waypointSymbol": waypoint_symbol}
+    
+def build_patch_ship_nav_request(flight_mode: str) -> Any:
+    try:
+        from openapi_client.models.patch_ship_nav_request import PatchShipNavRequest
+        return PatchShipNavRequest(flight_mode=flight_mode)
+    except Exception:
+        return {"flight_mode": flight_mode, "flightMode": flight_mode}
 
 # ---------- safe API call wrappers (hide SDK differences) ---------------------
 async def api_get_my_ships(fleet_api) -> list[Any]:
@@ -186,13 +186,14 @@ async def api_navigate_ship(fleet_api, ship_symbol: str, waypoint_symbol: str) -
     now = datetime.now(timezone.utc)
     secs_to_arrival = (act.arr_time - now).total_seconds()
     print("Seconds until arrival:", secs_to_arrival)
-    await asyncio.sleep(secs_to_arrival + 2)
+    await asyncio.sleep(secs_to_arrival + 1)
     print("Arrived and ready")
     # wait complete
 
     return unwrap_data(resp)
 
 async def api_purchase_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, cargo_symbol:str, units: int):
+    await api_dock_ship(fleet_api, ship_symbol)
     req = build_purchase_cargo_request(cargo_symbol=cargo_symbol, units=units)
     resp = await call_sdk(fleet_api, "purchase_cargo", ship_symbol=ship_symbol , purchase_cargo_request = req)
     await market_to_db(waypoint = waypoint_symbol)
@@ -200,9 +201,16 @@ async def api_purchase_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, c
     return unwrap_data(resp)
 
 async def api_sell_cargo(fleet_api, ship_symbol:str, waypoint_symbol: str, cargo_symbol:str, units: int):
+    await api_dock_ship(fleet_api, ship_symbol)
     req = build_sell_cargo_request(cargo_symbol=cargo_symbol, units=units)
     resp = await call_sdk(fleet_api, "sell_cargo", ship_symbol=ship_symbol , sell_cargo_request = req)
     await market_to_db(waypoint = waypoint_symbol)
+
+    return unwrap_data(resp)
+
+async def api_patch_nav_flight_mode(fleet_api, ship_symbol:str, flight_mode: str):
+    req = build_patch_ship_nav_request(flight_mode=flight_mode)
+    resp = await call_sdk(fleet_api, "patch_ship_nav", ship_symbol=ship_symbol , patch_ship_nav_request = req)
 
     return unwrap_data(resp)
 
@@ -245,7 +253,7 @@ async def nav_prep(fleet_api, ship_symbol: str, waypoint_symbol: str) -> bool:
         now = datetime.now(timezone.utc)
         secs_to_arrival = (act.arr_time - now).total_seconds()
         print("Seconds until arrival:", secs_to_arrival)
-        await asyncio.sleep(secs_to_arrival + 2)
+        await asyncio.sleep(secs_to_arrival + 1)
         print("Arrived and ready")
         update = await build_fleet_object(fleet_api)
         new_status = update.get(act.symbol).status
@@ -256,13 +264,11 @@ async def nav_prep(fleet_api, ship_symbol: str, waypoint_symbol: str) -> bool:
         print("Refuelling now...")
         await api_dock_ship(fleet_api, act.symbol)
         act.status = "DOCKED"
-        await asyncio.sleep(2)
         await api_refuel_ship(fleet_api, act.symbol)
 
     if not act.in_orbit_check:
         print("Not in orbit, going into orbit now...")
         await api_orbit_ship(fleet_api, act.symbol)
-        await asyncio.sleep(2)
 
     return True   # ready to navigate
 
