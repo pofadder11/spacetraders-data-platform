@@ -461,8 +461,8 @@ def _rotate_to_start(tour: List[int], want_first: int) -> List[int]:
     i = tour.index(want_first)
     return tour[i:] + tour[:i]
 
-def all_market_visitor(
-    markets_df: pd.DataFrame,
+def all_wp_visitor(
+    df: pd.DataFrame,
     start_waypoint: Optional[str] = None,
     return_to_start: bool = False,
     improve_2opt: bool = True,
@@ -471,7 +471,7 @@ def all_market_visitor(
     """
     Build a route that visits all markets.
 
-    markets_df: DataFrame with columns ['waypoint', 'x', 'y']
+    df: DataFrame with columns ['waypoint', 'x', 'y']
     start_waypoint: waypoint symbol to start at (required for your use case).
     return_to_start: if True, append the start at the end (closed loop).
     improve_2opt: apply 2-opt local improvement to reduce total path length.
@@ -479,14 +479,14 @@ def all_market_visitor(
 
     Returns a DataFrame ordered by visit, with leg and cumulative distances.
     """
-    if markets_df.empty:
+    if df.empty:
         return pd.DataFrame(columns=["visit_idx", "waypoint", "x", "y", "leg_distance", "cumulative_distance"])
 
     for col in ["waypoint", "x", "y"]:
-        if col not in markets_df.columns:
+        if col not in df.columns:
             raise ValueError(f"markets_df must contain column '{col}'")
 
-    df = markets_df[["waypoint", "x", "y"]].copy().reset_index(drop=True)
+    df = df[["waypoint", "x", "y"]].copy().reset_index(drop=True)
     coords = df[["x", "y"]].to_numpy(dtype=float)
     D = _pairwise_dist_matrix(coords)
 
