@@ -27,7 +27,7 @@ from domain.waypoint_trait import WaypointTraitRow
 from domain.fleet_state import FleetState
 from domain.ships_activity import ShipsActivity
 
-from market_runtime import capture_market_for_waypoint, market_to_db
+from market_runtime import capture_market_for_waypoint, market_to_db, capture_shipyard_for_waypoint, shipyard_to_db
 
 from adapters.ships_specs_adapter import adapt_ships_specs_from_ship
 from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merge_activity_with_nav
@@ -603,6 +603,34 @@ async def patrol_markets(ship_symbol: str, markets_df) -> None:
             nav_resp = await api_navigate_ship(fleet_api, ship_symbol, wp)
             print(f"[MARKET] Capturing {wp} …")
             await market_to_db(wp)
+            await asyncio.sleep(1.0)  # small dwell
+
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[ERR] Patrol step at {wp} failed: {e!r}")
+            await asyncio.sleep(3.0)  # brief backoff
+
+        # round-robin
+        idx = (idx + 1) % len(waypoints)
+
+async def patrol_shipyards(ship_symbol: str, shipyards_df) -> None:
+    # dedupe and coerce to plain list of strings
+    waypoints: List[str] = list(dict.fromkeys(shipyards_df["waypoint"].astype(str).tolist()))
+    print(waypoints)
+    if not waypoints:
+        print("[WARN] No waypoints to patrol.")
+        return
+
+    print(f"[PATROL] {ship_symbol} looping through {len(waypoints)} shipyards.")
+    idx = 0
+    while True:
+        wp = waypoints[idx]
+        try:
+            print(f"[PATROL] -> Navigating to {wp} (#{idx+1}/{len(waypoints)})")
+            nav_resp = await api_navigate_ship(fleet_api, ship_symbol, wp)
+            print(f"[Shipyard] Capturing {wp} …")
+            await shipyard_to_db(wp)
             await asyncio.sleep(1.0)  # small dwell
 
         except asyncio.CancelledError:

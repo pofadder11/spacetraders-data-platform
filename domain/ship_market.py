@@ -34,5 +34,11 @@ class ShipMarketRow(BaseModel):
     engine_speed: Optional[int] = None
     engine_quality: Optional[int] = None
 
+    modules: Optional[list] = None
+    mounts: Optional[list] = None
+    crew_required: Optional[int] = None
+    crew_capacity: Optional[int] = None
+
     # fees
     modifications_fee: Optional[int] = None
+   

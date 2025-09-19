@@ -27,11 +27,9 @@ from domain.market_rows import (
     MarketExportRow, MarketImportRow, MarketExchangeRow,
     MarketTransactionRow, MarketGoodRow
 )
-from adapters.market_adapter import (
-    adapt_market_all,
-)
-
-
+from domain.ship_market import ShipMarketRow
+from adapters.market_adapter import adapt_market_all
+from adapters.shipyard_adapter import adapt_ship_market_rows
 
 def _load_env_token() -> Optional[str]:
     try:
@@ -113,6 +111,24 @@ async def api_get_market(systems_api: SystemsApi, waypoint_symbol: str) -> Any:
 
     raise AttributeError("Your SystemsApi client does not have a market getter (get_market / get_system_waypoint_market / get_waypoint_market).")
 
+async def api_get_shipyard(systems_api: SystemsApi, waypoint_symbol: str) -> Any:
+    """
+    Returns the raw market DTO (OpenAPI model or dict-like), unwrapped from .data if present.
+    Handles possible SDK method name differences via getattr.
+    """
+    system_symbol = system_symbol_from_waypoint(waypoint_symbol)
+
+    if hasattr(systems_api, "get_shipyard"):
+        resp = await call_sdk(
+            systems_api, "get_shipyard",
+            system_symbol=system_symbol,
+            waypoint_symbol=waypoint_symbol
+        )
+        return unwrap_data(resp)
+
+    raise AttributeError("Your SystemsApi client does not have a market getter (get_market / get_system_waypoint_market / get_waypoint_market).")
+
+
 # -----------------------------------------------------------------------------------------------
 # Adaptation helpers
 # -----------------------------------------------------------------------------------------------
@@ -142,6 +158,18 @@ async def capture_market_for_waypoint(
         "transactions": transactions,
         "goods": goods,
     }
+
+async def capture_shipyard_for_waypoint(
+    systems_api: SystemsApi,
+    waypoint_symbol: str,
+) -> Dict[str, List[Any]]:
+    """
+    Fetch and adapt all shipyard data for a single waypoint.
+    Returns a dict with keys: exports, imports, exchange, transactions, goods.
+    """
+    dto = await api_get_shipyard(systems_api, waypoint_symbol)
+    shipyard_market_data = adapt_ship_market_rows(dto, waypoint_symbol)
+    return shipyard_market_data
 
 # -----------------------------------------------------------------------------------------------
 # Batch capture helpers
@@ -246,3 +274,10 @@ async def market_to_db(waypoint: str) -> None:
         snapshot_many(conn, "market_goods", MarketGoodRow, rows["goods"])  # append-only history
         if rows["transactions"]:
             upsert_many(conn, TableSpec(table="market_transactions", pk="id"), rows["transactions"])
+
+async def shipyard_to_db(waypoint: str) -> None:
+    # Fetch first (network I/O), then write to DB (short-lived connection)
+    rows = await capture_shipyard_for_waypoint(systems_api, waypoint)
+    with sqlite3.connect("spacetraders.db") as conn:
+        snapshot_many(conn, "shipyards", ShipMarketRow, rows)  # append-only history
+    

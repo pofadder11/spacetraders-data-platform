@@ -54,6 +54,11 @@ def adapt_ship_market_rows(shipyard_dto, waypoint_symbol: str) -> List[ShipMarke
             engine_integrity=g(s, "engine", "integrity"),
             engine_speed=g(s, "engine", "speed"),
             engine_quality=g(s, "engine", "quality"),
+            
+            modules=getattr(s, "modules", None),
+            mounts=getattr(s, "mounts", None),
+            crew_required=g(s, "crew", "required"),
+            crew_capacity=g(s, "crew", "capacity"),
 
             # fees
             modifications_fee=mod_fee,
