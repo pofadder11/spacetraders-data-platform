@@ -111,12 +111,19 @@ def build_sell_cargo_request(cargo_symbol: str, units: int) -> Any:
     except Exception:
         return {"symbol": cargo_symbol, "units": units}
     
+def build_purchase_ship_request(ship_symbol: str, waypoint: str) -> Any:
+    try:
+        from openapi_client.models.purchase_ship_request import PurchaseShipRequest
+        return PurchaseShipRequest(ship_symbol=ship_symbol, waypoint=waypoint)
+    except Exception:
+        return {"shipType": ship_symbol, "waypointSymbol": waypoint}
+    
 def build_nav_request(waypoint_symbol: str) -> Any:
     try:
         from openapi_client.models.navigate_ship_request import NavigateShipRequest
         return NavigateShipRequest(waypoint_symbol=waypoint_symbol)
     except Exception:
-        return {"waypoint_symbol": waypoint_symbol, "waypointSymbol": waypoint_symbol}
+        return {"waypointSymbol": waypoint_symbol}
     
 def build_patch_ship_nav_request(flight_mode: str) -> Any:
     try:
@@ -133,6 +140,22 @@ async def api_get_my_ships(fleet_api) -> list[Any]:
 
 async def api_get_ship_nav(fleet_api, ship_symbol: str) -> Any:
     resp = await call_sdk(fleet_api, "get_ship_nav", ship_symbol=ship_symbol)
+    return unwrap_data(resp)
+
+async def api_create_ship_waypoint_scan(fleet_api, ship_symbol: str) -> Any:
+    resp = await call_sdk(fleet_api, "create_ship_waypoint_scan", ship_symbol)
+    return unwrap_data(resp)
+
+async def api_create_ship_ship_scan(fleet_api, ship_symbol: str) -> Any:
+    resp = await call_sdk(fleet_api, "create_ship_ship_scan", ship_symbol)
+    return unwrap_data(resp)
+
+async def api_create_survey(fleet_api, ship_symbol: str) -> Any:
+    resp = await call_sdk(fleet_api, "create_survey", ship_symbol)
+    return unwrap_data(resp)
+
+async def api_extract_resources_with_survey(fleet_api, ship_symbol: str, survey: dict) -> Any:
+    resp = await call_sdk(fleet_api, "extract_resources_with_survey", ship_symbol, survey=survey)
     return unwrap_data(resp)
 
 async def api_get_my_agent(agents_api) -> Any:
