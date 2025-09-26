@@ -34,6 +34,8 @@ from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merg
 from adapters.waypoint_adapter import adapt_waypoints              # returns List[WaypointRef]
 from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos  # returns List[WaypointTraitRow]
 
+from refuel_routing import plan_route_and_refuel_with_reserve
+
 from sdk_runtime_helper import call_sdk, unwrap_data
 
 from runtime_support import (
@@ -586,9 +588,10 @@ def plot_route_svg(
     plt.savefig(svg_path, format="svg")
     print(f"Saved SVG -> {svg_path}")
 
-async def patrol_markets(ship_symbol: str, markets_df) -> None:
+async def patrol_markets(ship_symbol: str, markets_df, nodes: Iterable[Node]) -> None:
     # dedupe and coerce to plain list of strings
     waypoints: List[str] = list(dict.fromkeys(markets_df["waypoint"].astype(str).tolist()))
+    leg_distance: List[str] = list(dict.fromkeys(markets_df["leg_distance"].astype(int).tolist()))
     print(waypoints)
     if not waypoints:
         print("[WARN] No waypoints to patrol.")
@@ -598,8 +601,18 @@ async def patrol_markets(ship_symbol: str, markets_df) -> None:
     idx = 0
     while True:
         wp = waypoints[idx]
+        cur = idx - 1
+        cur_wp = waypoints[cur]
+        leg_dist = leg_distance[idx]
         try:
             print(f"[PATROL] -> Navigating to {wp} (#{idx+1}/{len(waypoints)})")
+            if leg_dist > 400: # 400 is a fixed value that needs to be read from the current fuel tank of the ship
+
+                plan = plan_route_and_refuel_with_reserve(nodes, cur_wp, wp, 400 , 40, 1, 3600, 400, 0, 500, 0, 5, 0,1)
+                route = plan["path"]
+                for rt in route:
+                    await api_navigate_ship(fleet_api, ship_symbol, rt)
+
             nav_resp = await api_navigate_ship(fleet_api, ship_symbol, wp)
             print(f"[MARKET] Capturing {wp} …")
             await market_to_db(wp)
@@ -608,11 +621,12 @@ async def patrol_markets(ship_symbol: str, markets_df) -> None:
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            print(f"[ERR] Patrol step at {wp} failed: {e!r}")
+            print(f"[ERROR] Patrol step at {wp} failed: {e!r}")
             await asyncio.sleep(3.0)  # brief backoff
 
         # round-robin
         idx = (idx + 1) % len(waypoints)
+
 
 async def patrol_shipyards(ship_symbol: str, shipyards_df) -> None:
     # dedupe and coerce to plain list of strings
