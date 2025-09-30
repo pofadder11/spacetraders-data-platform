@@ -34,7 +34,7 @@ from adapters.ships_activity_adapter import adapt_ships_activity_from_ship, merg
 from adapters.waypoint_adapter import adapt_waypoints              # returns List[WaypointRef]
 from adapters.waypoint_trait_adapter import adapt_traits_from_waypoint_dtos  # returns List[WaypointTraitRow]
 
-from refuel_routing import plan_route_and_refuel_with_reserve
+from refuel_routing import plan_route_and_refuel_with_reserve, compute_graph_distance
 
 from sdk_runtime_helper import call_sdk, unwrap_data
 
@@ -588,32 +588,66 @@ def plot_route_svg(
     plt.savefig(svg_path, format="svg")
     print(f"Saved SVG -> {svg_path}")
 
-async def patrol_markets(ship_symbol: str, markets_df, nodes: Iterable[Node]) -> None:
-    # dedupe and coerce to plain list of strings
-    waypoints: List[str] = list(dict.fromkeys(markets_df["waypoint"].astype(str).tolist()))
-    leg_distance: List[str] = list(dict.fromkeys(markets_df["leg_distance"].astype(int).tolist()))
-    print(waypoints)
+async def patrol_markets(fleet_api, ship_symbol: str,
+                         markets_df,
+                         nodes: Iterable[Node],
+                         single_leg_range: int = 400,
+                         reserve_range: int = 400
+                         ) -> None:
+    # dedupe and coerce to plain lists
+
+    dedup = (
+        markets_df[["waypoint", "leg_distance"]]
+        .astype({"waypoint": str, "leg_distance": int})
+        .drop_duplicates(subset="waypoint", keep="first")
+    )
+
+    waypoints: List[str] = dedup["waypoint"].tolist()
+    leg_distances: List[int] = dedup["leg_distance"].tolist()
+
+    print("Waypoints to patrol:", waypoints)
+    print("Leg distances aligned:", leg_distances)
     if not waypoints:
         print("[WARN] No waypoints to patrol.")
         return
+    
+    try:
+        nav = await api_get_ship_nav(fleet_api, ship_symbol)  # should return current waypoint symbol
+        cur_wp = nav["waypoint_symbol"]
 
-    print(f"[PATROL] {ship_symbol} looping through {len(waypoints)} markets.")
+    except Exception:
+        # Fallback: assume we start before the first hop
+        cur_wp = waypoints[0]
+
+    print(f"[PATROL] {ship_symbol} looping through {len(waypoints)} markets. Starting at {cur_wp}")
+
     idx = 0
+    n = len(waypoints)
+
     while True:
         wp = waypoints[idx]
-        cur = idx - 1
-        cur_wp = waypoints[cur]
-        leg_dist = leg_distance[idx]
-        try:
-            print(f"[PATROL] -> Navigating to {wp} (#{idx+1}/{len(waypoints)})")
-            if leg_dist > 400: # 400 is a fixed value that needs to be read from the current fuel tank of the ship
+        # Try to pick the right leg distance for cur_wp -> wp:
+        # If cur_wp != previous waypoint in our sequence, we should compute
+        # distance from the graph instead of trusting the precomputed column.
+        # Here we do a simple heuristic:
+        leg_dist = compute_graph_distance(nodes, cur_wp, wp)
 
+        try:
+            print(f"[PATROL] -> Navigating to {wp} (#{idx+1}/{n}), leg ~ {leg_dist}")
+
+            if leg_dist > single_leg_range:
+                # Plan multi-hop route with refuels
                 plan = plan_route_and_refuel_with_reserve(nodes, cur_wp, wp, 400 , 40, 1, 3600, 400, 0, 500, 0, 5, 0,1)
-                route = plan["path"]
+                route: List[str] = plan["path"]
+
                 for rt in route:
                     await api_navigate_ship(fleet_api, ship_symbol, rt)
+                    cur_wp = rt  # keep our "current" position in sync
+            else:
+                # Single hop direct
+                await api_navigate_ship(fleet_api, ship_symbol, wp)
+                cur_wp = wp
 
-            nav_resp = await api_navigate_ship(fleet_api, ship_symbol, wp)
             print(f"[MARKET] Capturing {wp} …")
             await market_to_db(wp)
             await asyncio.sleep(1.0)  # small dwell
@@ -625,7 +659,7 @@ async def patrol_markets(ship_symbol: str, markets_df, nodes: Iterable[Node]) ->
             await asyncio.sleep(3.0)  # brief backoff
 
         # round-robin
-        idx = (idx + 1) % len(waypoints)
+        idx = (idx + 1) % n
 
 
 async def patrol_shipyards(ship_symbol: str, shipyards_df) -> None:

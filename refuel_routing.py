@@ -225,6 +225,22 @@ def compute_refuel_plan(
 
     return actions
 
+def compute_graph_distance(nodes: Iterable[Node], a_symbol: str, b_symbol: str) -> float:
+    """
+    Straight-line distance between waypoints a_symbol and b_symbol,
+    using the Node coordinates already available.
+
+    Returns distance in the same units as your Node.x/Node.y (e.g., AU).
+    """
+    node_map = {n.symbol: n for n in nodes}
+    try:
+        a = node_map[a_symbol]
+        b = node_map[b_symbol]
+    except KeyError as e:
+        raise ValueError(f"Unknown waypoint symbol: {e.args[0]}") from None
+    return euclid(a, b)
+
+
 
 # ----------------------
 # High-level one-call
