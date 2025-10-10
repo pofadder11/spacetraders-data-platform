@@ -1,20 +1,19 @@
 
 # spacetraders-data-platform
-fullstack datascience sandbox
+fullstack api-familiarisation sandbox
 ----------------------------
 
-A modular data platform built around the [SpaceTraders API](https://spacetraders.io/), designed as a learning project for data engineering and data science.  
-It demonstrates **API integration, ETL pipelines, SQL databases, analytics, visualization, and testing** using (hopefully) software-development-industry relevant tools and methodologies.
+A modular data platform built around the [SpaceTraders API](https://spacetraders.io/), designed as a learning project for data engineering and potentially data science.  
+It demonstrates **API integration, SQL databases, analytics, visualization, and testing** using (hopefully) software-development-industry relevant tools and methodologies.
 
 ---
 
 ## Features
 - :white_check_mark: **API Client**: Robust Python client with rate-limit handling and caching
-- :white_check_mark: **ETL Pipelines**: Extract/Transform/Load workflows (Prefect/Airflow-ready)
 - :white_check_mark: **Database Layer**: PostgreSQL/SQLite with SQLAlchemy ORM
-- ⬜ **Analytics**: Trade route profitability, fleet allocation, contracts
-- ⬜ **Dashboards**: Streamlit app with real-time fleet and market insights
-- :white_check_mark: **Testing & CI/CD**: Pytest, linting, and GitHub Actions for automation
+- :white_check_mark: **Analytics**: Trade route profitability (to add: fleet allocation, contracts)
+- :white_check_mark: **Dashboards**: React dashboard with real-time fleet and market insights
+- ⬜ **Testing & CI/CD**: Pytest, linting, and GitHub Actions for automation
 - ⬜ **Dockerized**: Fully reproducible environment
 
 ---
