@@ -10,19 +10,17 @@ It demonstrates **API integration, SQL databases, analytics, visualization, and 
 
 ## Features
 - :white_check_mark: **API Client**: Robust Python client with rate-limit handling and caching
-- :white_check_mark: **Database Layer**: PostgreSQL/SQLite with SQLAlchemy ORM
+- :white_check_mark: **Database Layer**: PostgreSQL/SQLite with SQLAlchemy ORM (currently on SQLite, Postgres for Docker later)
 - :white_check_mark: **Analytics**: Trade route profitability (to add: fleet allocation, contracts)
-- :white_check_mark: **Dashboards**: React dashboard with real-time fleet and market insights
+- :white_check_mark: **Dashboards**: React dashboard with real-time fleet and market arbitrage and profit-loss insights
 - ⬜ **Testing & CI/CD**: Pytest, linting, and GitHub Actions for automation
 - ⬜ **Dockerized**: Fully reproducible environment
 
 ---
 
-## Architecture
+## Architecture overview
 
 (API) → [ETL] → (Database: SQL) → [Analytics / ML] → (Dashboards)
-
-See the [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ---
 
