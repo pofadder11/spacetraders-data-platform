@@ -27,6 +27,9 @@ from typing_extensions import Annotated, Self
 from openapi_client.models.survey_deposit import SurveyDeposit
 from openapi_client.models.survey_size import SurveySize
 
+from pydantic import BaseModel, field_serializer
+from datetime import datetime, timezone
+
 
 class Survey(BaseModel):
     """
@@ -45,6 +48,13 @@ class Survey(BaseModel):
     expiration: datetime = Field(
         description="The date and time when the survey expires. After this date and time, the survey will no longer be available for extraction."
     )
+
+    @field_serializer("expiration")
+    def expiration_to_z(self, v: datetime, _info):
+        # always render in UTC with Z suffix and 3-digit ms
+        v = v.astimezone(timezone.utc)
+        return v.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
     size: SurveySize
     __properties: ClassVar[List[str]] = [
         "signature",
